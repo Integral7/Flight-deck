@@ -26,8 +26,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 5 | Input: keyboard + touch — **PAUSE for user** | ✅ done (user said go) |
 | 6 | Cockpit + instruments, HUD, minimap | ✅ done |
 | 7 | Sky, day/night, lighting polish | ✅ done |
-| 8 | Weather: clouds, fog, rain | ⏳ next |
-| 9 | Airports + landing challenge — **PAUSE for user** | |
+| 8 | Weather: clouds, fog, rain | ✅ done |
+| 9 | Airports + landing challenge — **PAUSE for user** | ⏳ next |
 | 10 | Rings + time trial | |
 | 11 | Menu (incl. quality), scenic mode, photo mode | |
 | 12 | Headless run, error + frame-time fixes, screenshots | |
@@ -100,10 +100,22 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   washed-out look: terrain palette is sRGB and is now converted to linear vertex colours.
   CSS vignette. `?time=HH` URL param. `tests/dayNight.test.js` (8). 100 tests green.
 
+- M8: `src/world/weather.js` (presets clear/cloudy/overcast/rain/fog, 20 s smoothstep
+  transitions, veering gusty wind, turbulence = weather + low-level + in-cloud, in-cloud
+  visibility collapse), `clouds.js` (instanced camera-facing puffs from a canvas texture,
+  deterministic clusters per 1.4 km cell gated by cover, wind drift, back-to-front sort
+  4x/s, lit tops/dark bellies, fog), `rain.js` (LineSegments animated in the vertex shader,
+  wrapped box around camera, streaks slant with apparent wind). Weather drives env
+  overcast/visibility/light and the flight model's wind + turbulence. Y cycles weather,
+  `?weather=` URL param, HUD shows time/weather/wind. `tests/weather.test.js` (8).
+  108 tests green. Profiled (high, rain, SwiftShader): chunks 1.25 ms, hud 1.7 ms,
+  env 0.25 ms, clouds 0.24 ms avg per frame.
+
 ## Next
-- M8: `src/world/weather.js` (states clear/cloudy/overcast/rain/fog, smooth transitions,
-  wind + turbulence into flight env), `clouds.js` (instanced billboard puffs around the
-  camera), `rain.js` (GPU particles), Y key cycles weather, weather tests.
+- M9: `src/world/airports.js` (runway mesh w/ markings + numbers, taxiway/apron, hangars,
+  windsock, approach/edge lights at night, PAPI), `src/modes/landing.js` (spawn on final,
+  scoring: touchdown VS, centreline, bank, touchdown zone, stop on runway; grades),
+  landing tests. Then **PAUSE** with summary + Windows commands.
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.

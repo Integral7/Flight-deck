@@ -8,6 +8,9 @@ import { CHUNK_SIZE } from './terrain/chunk.js';
 import { Water } from './world/water.js';
 import { Environment } from './world/environment.js';
 import { formatClock } from './world/dayNight.js';
+import { Weather, WEATHER_PRESETS } from './world/weather.js';
+import { Clouds } from './world/clouds.js';
+import { Rain } from './world/rain.js';
 import { Aircraft } from './aircraft/aircraft.js';
 import { CameraRig } from './camera/cameras.js';
 import { Input } from './input/input.js';
@@ -58,6 +61,12 @@ export class Game {
 
     this._setupLights();
     this._createWorld(this.settings.resolveSeed());
+    const w = params.get('weather');
+    this.weather = new Weather(WEATHER_PRESETS[w] ? w : 'cloudy', this.seed);
+    this.clouds = new Clouds(this.scene, this.settings.preset, this.seed);
+    this.rain = new Rain(this.scene, this.settings.preset.rainCount);
+    this._cloudLight = { lit: new THREE.Color(), shadow: new THREE.Color() };
+    this._ambient = new THREE.Color();
     this.aircraft = new Aircraft(this.scene, this.settings.get('aircraft'));
     this.rig.setAircraft(this.aircraft.type.id);
     this.cockpit = new Cockpit(this.settings.get('quality'));
@@ -207,6 +216,10 @@ export class Game {
           this.env3d.advance(1);
           this.overlay.toast(`Time ${formatClock(this.env3d.hours + 1)}`);
           break;
+        case 'weather':
+          this.weather.cycle();
+          this.overlay.toast(`Weather: ${this.weather.label}`);
+          break;
         case 'map':
           this.hud.largeMap.toggle();
           break;
@@ -303,7 +316,12 @@ export class Game {
     this.forward.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
     this.chunks.update(this.camera.position, this.forward);
     this.water.update(dt, this.camera.position);
+    this._updateWeather(dt);
     this.env3d.update(dt, this.camera, this.aircraft.renderPos);
+    const cl = this.env3d.cloudColors(this._cloudLight.lit, this._cloudLight.shadow);
+    this.clouds.update(dt, this.camera, this.weather.current, this.weather.wind, cl, this.viewDistance * 0.95);
+    this._ambient.copy(this.env3d.hemi.color).multiplyScalar(this.env3d.hemi.intensity);
+    this.rain.update(dt, this.camera, this.weather.current.rain, this.aircraft.state.vel, this.weather.wind, this._ambient);
     const t2 = performance.now();
 
     this.camera.aspect = this.renderer.aspect;
@@ -317,6 +335,20 @@ export class Game {
     this._updateHud(dt, controls);
     this.touch.update(controls);
     this.onFrame?.(dt);
+  }
+
+  _updateWeather(dt) {
+    const s = this.aircraft.state;
+    const w = this.weather;
+    w.update(dt, s.pos.y);
+    const c = w.current;
+    const e = this.env3d.weather;
+    e.overcast = Math.max(c.overcast, w.inCloud * 0.6);
+    e.visibility = w.visibility();
+    e.light = c.light;
+    e.haze = c.haze;
+    this.env.wind.set(w.wind.x, 0, w.wind.z);
+    this.env.turbulence = w.turbulenceAt(Math.max(0, s.agl));
   }
 
   /** Refresh map overlays (airports, target) about once a second. */
@@ -335,6 +367,11 @@ export class Game {
     }
   }
 
+  _conditionsLine() {
+    const wr = this.weather.windReport();
+    return `<div class="dim">${formatClock(this.env3d.hours)} · ${this.weather.label} · wind ${String(wr.from).padStart(3, '0')}° ${wr.knots} kt</div>`;
+  }
+
   _updateHud(dt, controls) {
     this._updateWorldInfo(dt);
     const s = this.aircraft.state;
@@ -351,8 +388,9 @@ export class Game {
       this.hud.setInfo(
         'Free flight',
         ap
-          ? `<div>${ap.name.full} <span class="dim">${ap.name.code}</span></div><div class="dim">${(d / 1852).toFixed(1)} nm · field elev ${Math.round(ap.elevation * 3.28084)} ft</div>`
-          : '',
+          ? `<div>${ap.name.full} <span class="dim">${ap.name.code}</span></div><div class="dim">${(d / 1852).toFixed(1)} nm · field elev ${Math.round(ap.elevation * 3.28084)} ft</div>` +
+              this._conditionsLine()
+          : this._conditionsLine(),
       );
     }
   }

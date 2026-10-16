@@ -151,6 +151,18 @@ export class Environment {
     this._updateEnvMap(dt, st);
   }
 
+  /** Colours for lit cloud tops and shaded bellies under the current light. */
+  cloudColors(lit, shadow) {
+    const l = this.light;
+    const h = this.hemi;
+    const t = this._tmp;
+    lit.copy(l.color).multiplyScalar(l.intensity * 0.32).add(t.copy(h.color).multiplyScalar(h.intensity * 1.1));
+    shadow.copy(h.color).multiplyScalar(h.intensity * 0.75).add(t.copy(h.groundColor).multiplyScalar(h.intensity * 0.35));
+    // Overcast/rain clouds are greyer and darker underneath.
+    shadow.multiplyScalar(1 - this.weather.overcast * 0.35);
+    return { lit, shadow };
+  }
+
   /**
    * Nose-mounted landing light for night flying. It is always present and
    * fades by intensity so the light count (and shaders) never change.
