@@ -226,3 +226,9 @@ body.touch-mode .hi-body { font-size: 12px; }
 body.touch-mode .hi-body .dim { display: none; }
 body.touch-mode .minimap { top: 60px; width: 120px; }
 .hud.cockpit .hud-info { opacity: 0.9; }
+
+/* Cinematic vignette (cheap: a CSS gradient, no post-processing pass). */
+.vignette {
+  position: absolute; inset: 0; pointer-events: none; z-index: 5;
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.28) 100%);
+}

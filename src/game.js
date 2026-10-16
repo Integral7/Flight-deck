@@ -6,6 +6,8 @@ import { createTerrain, SEA_LEVEL } from './terrain/heightfield.js';
 import { ChunkManager } from './terrain/chunkManager.js';
 import { CHUNK_SIZE } from './terrain/chunk.js';
 import { Water } from './world/water.js';
+import { Environment } from './world/environment.js';
+import { formatClock } from './world/dayNight.js';
 import { Aircraft } from './aircraft/aircraft.js';
 import { CameraRig } from './camera/cameras.js';
 import { Input } from './input/input.js';
@@ -46,6 +48,9 @@ export class Game {
     this.paused = false;
     this.forward = new THREE.Vector3();
 
+    const vignette = document.createElement('div');
+    vignette.className = 'vignette';
+    container.append(vignette);
     this.overlay = new Overlay(container);
     this.strip = new FlightStrip(container);
     this.touch = new TouchControls(container, this.input, { force: params.get('touch') === '1' });
@@ -57,6 +62,7 @@ export class Game {
     this.rig.setAircraft(this.aircraft.type.id);
     this.cockpit = new Cockpit(this.settings.get('quality'));
     this.cockpit.attach(this.aircraft.model, this.aircraft.type);
+    this.env3d.attachLandingLight(this.aircraft.model, this.aircraft.type);
 
     this.mapRenderer = new MapRenderer(this.chunks.pool, this.terrain);
     this.hud = new HUD(container, this.mapRenderer);
@@ -81,23 +87,9 @@ export class Game {
   }
 
   _setupLights() {
-    const sky = new THREE.Color(0x9cc4e8);
-    this.scene.background = sky;
-    this.hemi = new THREE.HemisphereLight(0xcfe6ff, 0x4f5a3a, 0.9);
-    this.scene.add(this.hemi);
-    this.sun = new THREE.DirectionalLight(0xfff1dd, 2.2);
-    this.sun.castShadow = this.settings.preset.shadows;
-    const sz = this.settings.preset.shadowMapSize || 1024;
-    this.sun.shadow.mapSize.set(sz, sz);
-    const cam = this.sun.shadow.camera;
-    cam.left = cam.bottom = -60;
-    cam.right = cam.top = 60;
-    cam.near = 1;
-    cam.far = 2000;
-    this.sun.shadow.bias = -0.0004;
-    this.sun.shadow.normalBias = 0.6;
-    this.sunDir = new THREE.Vector3(0.45, 0.75, 0.3).normalize();
-    this.scene.add(this.sun, this.sun.target);
+    this.env3d = new Environment(this.scene, this.renderer, this.settings.preset);
+    const t = Number(this.params.get('time'));
+    if (this.params.has('time') && Number.isFinite(t)) this.env3d.setTime(t);
   }
 
   _createWorld(seed) {
@@ -106,7 +98,7 @@ export class Game {
     this.terrain = createTerrain(seed);
     const far = preset.viewRadius * CHUNK_SIZE;
     this.viewDistance = far;
-    this.scene.fog = new THREE.Fog(this.scene.background, far * 0.3, far * 0.97);
+    this.env3d.setViewDistance(far);
     this.camera.far = far * 1.3;
     if (this.chunks) this.chunks.setTerrain(this.terrain);
     else this.chunks = new ChunkManager(this.scene, this.terrain, preset);
@@ -211,6 +203,10 @@ export class Game {
             this.overlay.toast(`Flaps ${['up', 'half', 'full'][c.flaps * 2]}`);
           }
           break;
+        case 'time':
+          this.env3d.advance(1);
+          this.overlay.toast(`Time ${formatClock(this.env3d.hours + 1)}`);
+          break;
         case 'map':
           this.hud.largeMap.toggle();
           break;
@@ -307,7 +303,7 @@ export class Game {
     this.forward.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
     this.chunks.update(this.camera.position, this.forward);
     this.water.update(dt, this.camera.position);
-    this._updateSun();
+    this.env3d.update(dt, this.camera, this.aircraft.renderPos);
     const t2 = performance.now();
 
     this.camera.aspect = this.renderer.aspect;
@@ -359,13 +355,6 @@ export class Game {
           : '',
       );
     }
-  }
-
-  _updateSun() {
-    const p = this.aircraft.renderPos;
-    this.sun.position.copy(p).addScaledVector(this.sunDir, 800);
-    this.sun.target.position.copy(p);
-    this.sun.target.updateMatrixWorld();
   }
 
   onFlightEvent(e) {

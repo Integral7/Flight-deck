@@ -69,10 +69,15 @@ export function terrainColor(terrain, s, slope, x, z, out) {
   if (snow > 0) mix3(out, out, C.snow, snow);
   if (s.runway) mix3(out, out, C.runway, 1);
 
-  out[0] = clamp(out[0] + v, 0, 1);
-  out[1] = clamp(out[1] + v, 0, 1);
-  out[2] = clamp(out[2] + v * 0.6, 0, 1);
+  // The palette is authored in sRGB; vertex colours must be linear.
+  out[0] = srgbToLinear(clamp(out[0] + v, 0, 1));
+  out[1] = srgbToLinear(clamp(out[1] + v, 0, 1));
+  out[2] = srgbToLinear(clamp(out[2] + v * 0.6, 0, 1));
   return out;
+}
+
+export function srgbToLinear(c) {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
 function forestFactor(terrain, s, slope, x, z) {

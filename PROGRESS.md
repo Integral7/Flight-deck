@@ -25,8 +25,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 4 | Flight model + tests, aircraft meshes, chase camera | ✅ done |
 | 5 | Input: keyboard + touch — **PAUSE for user** | ✅ done (user said go) |
 | 6 | Cockpit + instruments, HUD, minimap | ✅ done |
-| 7 | Sky, day/night, lighting polish | ⏳ next |
-| 8 | Weather: clouds, fog, rain | |
+| 7 | Sky, day/night, lighting polish | ✅ done |
+| 8 | Weather: clouds, fog, rain | ⏳ next |
 | 9 | Airports + landing challenge — **PAUSE for user** | |
 | 10 | Rings + time trial | |
 | 11 | Menu (incl. quality), scenic mode, photo mode | |
@@ -91,10 +91,19 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 - `scripts/smoke.mjs` also supports `EVAL=` (run JS mid-way), `PRINT=` (dump expression),
   `PREVIEW=1`, `TOUCH=1`, `KEYS=KeyW:500,...`.
 
+- M7: `src/world/dayNight.js` (pure: sun/moon direction from hours, keyframed palette by
+  sun elevation, clock helpers), `sky.js` (gradient dome shader w/ sun disc+glow, moon,
+  overcast tint; Points stars), `environment.js` (time cycle 36-min day, T = +1 h smooth,
+  sun/moon key light with shadow following aircraft + shadow.intensity fade instead of
+  toggling castShadow, hemisphere ambient, fog from palette+weather, exposure, PMREM
+  env map from sky scene refreshed on change, nose landing light at night). Fixed the
+  washed-out look: terrain palette is sRGB and is now converted to linear vertex colours.
+  CSS vignette. `?time=HH` URL param. `tests/dayNight.test.js` (8). 100 tests green.
+
 ## Next
-- M7: `src/world/sky.js` (sky dome shader, sun/moon, stars), `dayNight.js` (sun path,
-  light colours, fog colour, exposure, env map for water), lighting polish (colour
-  grading, shadows following aircraft), night lights (runway later).
+- M8: `src/world/weather.js` (states clear/cloudy/overcast/rain/fog, smooth transitions,
+  wind + turbulence into flight env), `clouds.js` (instanced billboard puffs around the
+  camera), `rain.js` (GPU particles), Y key cycles weather, weather tests.
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.
