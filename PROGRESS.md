@@ -30,8 +30,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 9 | Airports + landing challenge — **PAUSE for user** | ✅ done (user said go) |
 | 10 | Rings + time trial | ✅ done |
 | 11 | Menu (incl. quality), scenic mode, photo mode | ✅ done |
-| 12 | Headless run, error + frame-time fixes, screenshots | ⏳ next |
-| 13 | README incl. "How this was built" | |
+| 12 | Headless run, error + frame-time fixes, screenshots | ✅ done |
+| 13 | README incl. "How this was built" | ✅ done |
 
 ## Done so far
 - M1: `package.json` (three 0.186, vite 8, vitest 5, eslint 10), `vite.config.js`
@@ -148,11 +148,19 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   frame — loading was frame-rate bound). Fixed `setAircraft` calling a removed method.
   Tests: autopilot (5), settings (8), menu (2). 149 tests green.
 
+- M12: `scripts/verify.mjs` (16-case matrix in headless Chromium + streaming leak test:
+  all pass, no console errors/warnings, geometry/chunk counts flat over 10 teleports),
+  far tree tier (sparse low-poly, 1 draw/chunk) removes the forest cut-off line, crash
+  wreck pose + smoke/fire (`src/world/effects.js`), chunk results attached by priority
+  under a per-frame time budget, ring scan throttled, trees ~40 % fewer triangles, rain
+  near-camera fade, `?adaptive=0`, debug stats triangle key clash fixed.
+  Measured (medium, software GL): ~115k tris / 120 draws on Low, ~300k / 250 on Medium.
+- M13: README rewritten (features, Windows run steps, controls, modes, settings, layout,
+  "How this was built"), screenshots in `docs/images/` from `scripts/readme-shots.mjs`.
+
 ## Next
-- M12: verification pass in headless Chromium across modes/qualities/aircraft/touch:
-  console errors, CPU timings, draw calls, memory (chunk/geometry counts stable over a
-  long flight), fixes. Polish items: far tree tier (hide tree cut-off line), crash wreck
-  visual (smoke + tilted model), screenshots for the README.
+- All 13 milestones are complete. Possible follow-ups: audio (engine, wind, rain),
+  tree collision, more airport variety, multiplayer ghosts for the time trial.
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.

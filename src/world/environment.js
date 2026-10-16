@@ -152,6 +152,12 @@ export class Environment {
     this.fog.color.copy(this._tmp);
     this.scene.background.copy(this._tmp);
     const vis = Math.max(0.03, w.visibility);
+    // Applied after tone mapping in output space, like three.js fog, so the
+    // uniform must be in sRGB (three converts its own fog colour the same way).
+    this.sky.uniforms.uFog.value.copy(this._tmp).convertLinearToSRGB();
+    // Low visibility: the whole lower sky must match the fog, because terrain
+    // beyond fog.far is pure fog colour and can rise well above the horizon.
+    this.sky.uniforms.uFogBlend.value = Math.min(1, Math.max(0, (1 - vis) * 2));
     this.fog.far = this.viewDistance * 0.97 * vis;
     this.fog.near = this.fog.far * (0.12 + 0.25 * vis) * (1 - w.haze * 0.5);
 

@@ -19,7 +19,7 @@ void main() {
   p -= uStreak * aEnd;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   float d = length(mv.xyz);
-  vAlpha = (1.0 - aEnd * 0.9) * smoothstep(${(BOX / 2).toFixed(1)}, 8.0, d) * smoothstep(0.5, 3.0, d);
+  vAlpha = (1.0 - aEnd * 0.9) * smoothstep(${(BOX / 2).toFixed(1)}, 8.0, d) * smoothstep(2.0, 7.0, d);
   gl_Position = projectionMatrix * mv;
 }`;
 

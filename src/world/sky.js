@@ -10,8 +10,10 @@ const vertex = /* glsl */ `
 varying vec3 vDir;
 void main() {
   vDir = normalize(position);
-  vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  gl_Position = p.xyww; // pin to the far plane
+  // The dome's radius is kept inside the far plane (see follow()), so no
+  // depth tricks are needed: pinning z to w gets clipped by rounding on
+  // GPUs without a reversed depth buffer.
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 
 const fragment = /* glsl */ `
@@ -25,6 +27,8 @@ uniform vec3 uMoonDir;
 uniform float uMoon;
 uniform float uOvercast;
 uniform vec3 uOvercastColor;
+uniform vec3 uFog;
+uniform float uFogBlend; // 0..1, higher in low visibility
 varying vec3 vDir;
 
 void main() {
@@ -52,6 +56,11 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
+  // Converge on the scene fog colour at the horizon so fully fogged terrain
+  // and water never show a silhouette. Applied after tone mapping, exactly
+  // where three.js applies fog to every other material.
+  float hz = 1.0 - smoothstep(0.0, mix(0.1, 0.55, uFogBlend), y);
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, uFog, clamp(hz + uFogBlend * uFogBlend, 0.0, 1.0));
 }`;
 
 export class Sky {
@@ -67,6 +76,8 @@ export class Sky {
       uMoon: { value: 0 },
       uOvercast: { value: 0 },
       uOvercastColor: { value: new THREE.Color(0x9aa3ad) },
+      uFog: { value: new THREE.Color(0x9cc4e8) },
+      uFogBlend: { value: 0 },
     };
     this.material = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
@@ -154,7 +165,7 @@ export class Sky {
     this.mesh.position.copy(camera.position);
     this.stars.position.copy(camera.position);
     // Keep the dome inside the far plane.
-    const s = camera.far * 0.9 / 1000;
+    const s = (camera.far * 0.85) / 1000;
     this.mesh.scale.setScalar(s);
     this.stars.scale.setScalar(s);
   }

@@ -328,7 +328,7 @@ export class Game {
       return;
     }
     // Only show the overlay if loading takes noticeable time.
-    this.loadingEl.hidden = this.loadingTime < 0.3 || this.menu.open;
+    this.loadingEl.hidden = this.loadingTime < 0.3 || this.menu.open || this.photo.active || !!this.overlay.modalOpen;
     this.loadingEl.querySelector('i').style.width = `${Math.round(progress * 100)}%`;
   }
 
