@@ -74,7 +74,28 @@ const DEFAULTS = {
   mode: 'free',
   invertPitch: false,
   showFps: false,
+  timeOfDay: 15.5,
+  dayCycle: 'normal',
+  weather: 'cloudy',
 };
+
+/** Game hours per real second for each day-cycle setting. */
+export const DAY_CYCLES = {
+  off: { label: 'Frozen', rate: 0 },
+  slow: { label: 'Slow (2.4 h day)', rate: 1 / 360 },
+  normal: { label: 'Normal (36 min day)', rate: 1 / 90 },
+  fast: { label: 'Fast (6 min day)', rate: 1 / 15 },
+};
+
+export const TIMES_OF_DAY = [
+  { label: 'Dawn', hours: 6.4 },
+  { label: 'Morning', hours: 9 },
+  { label: 'Noon', hours: 12.5 },
+  { label: 'Afternoon', hours: 15.5 },
+  { label: 'Golden hour', hours: 17.2 },
+  { label: 'Dusk', hours: 18.4 },
+  { label: 'Night', hours: 22.5 },
+];
 
 /** Pick a sensible starting tier from coarse hardware hints. */
 export function guessQuality(nav = globalThis.navigator) {

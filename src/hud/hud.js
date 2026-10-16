@@ -98,7 +98,7 @@ export class HUD {
    * @param {object} p.world { airports, rings, target }
    * @param {(x:number,z:number)=>number} p.groundAt
    */
-  update({ dt, state, controls, bug, world, groundAt }) {
+  update({ dt, state, controls, bug, world, groundAt, warnings: showWarnings = true }) {
     if (!this.visible) {
       if (this.largeMap.open) this.largeMap.update({ x: state.pos.x, z: state.pos.z, heading: state.heading }, world);
       return;
@@ -116,7 +116,7 @@ export class HUD {
     this.minimap.update(dt, plane, world);
     this.largeMap.update(plane, world);
 
-    const warnings = computeWarnings(state, groundAt);
+    const warnings = showWarnings ? computeWarnings(state, groundAt) : [];
     const key = warnings.map((w) => w.id).join(',');
     if (key !== this._warnKey) {
       this._warnKey = key;

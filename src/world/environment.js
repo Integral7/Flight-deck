@@ -42,6 +42,7 @@ export class Environment {
     scene.environmentIntensity = 0.65;
 
     this.weather = { overcast: 0, visibility: 1, light: 1, haze: 0 };
+    this.exposureBias = 0; // photo-mode EV adjustment
     this.state = null;
     this.sunDir = [0, 1, 0];
     this.moonDir = [0, 1, 0];
@@ -62,6 +63,15 @@ export class Environment {
     cam.updateProjectionMatrix();
     this.light.shadow.bias = -0.0005;
     this.light.shadow.normalBias = 0.5;
+  }
+
+  /** The renderer may be recreated (antialias change); rebuild the PMREM generator. */
+  setRenderer(renderer) {
+    this.renderer = renderer;
+    this.pmrem.dispose();
+    this.pmrem = new THREE.PMREMGenerator(renderer.gl);
+    this._envKey = null;
+    this._envTimer = 0;
   }
 
   applyQuality(preset) {
@@ -145,7 +155,7 @@ export class Environment {
     this.fog.far = this.viewDistance * 0.97 * vis;
     this.fog.near = this.fog.far * (0.12 + 0.25 * vis) * (1 - w.haze * 0.5);
 
-    this.renderer.gl.toneMappingExposure = st.exposure * (0.85 + 0.15 * w.light);
+    this.renderer.gl.toneMappingExposure = st.exposure * (0.85 + 0.15 * w.light) * Math.pow(2, this.exposureBias);
 
     this._updateLandingLight();
     this._updateEnvMap(dt, st);

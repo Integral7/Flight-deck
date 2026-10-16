@@ -127,7 +127,8 @@ export class ChunkManager {
   }
 
   _attachReady() {
-    let budget = this.preset.chunkBuildsPerFrame;
+    // While the game holds for loading, attach much more per frame.
+    let budget = this.preset.chunkBuildsPerFrame * (this.boost ? 6 : 1);
     // Attach the most important results first (missing chunks before refinements).
     while (this.ready.length && budget > 0) {
       const msg = this.ready.shift();

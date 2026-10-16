@@ -136,7 +136,7 @@ function sharedAssets() {
     opacity: 0.4,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    fog: false,
+    fog: true,
   });
   shared.papiOn = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
   shared.papiRed = new THREE.MeshBasicMaterial({ color: 0xff2a1a, toneMapped: false });
@@ -335,7 +335,7 @@ export class AirportRenderer {
     }
     const A = sharedAssets();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    A.lightMat.opacity = 0.35 + 0.65 * night;
+    A.lightMat.opacity = 0.12 + 0.88 * night;
     A.lightMat.size = (2 + 2.5 * night) * dpr;
     A.glass.emissive.setRGB(0.25 * night, 0.22 * night, 0.15 * night);
     const windAngle = Math.atan2(wind.x, wind.z);

@@ -35,6 +35,12 @@ export class CameraRig {
     this._camUp = new THREE.Vector3(0, 1, 0);
     this._initialized = false;
     this._shakeT = 0;
+    // Photo orbit (absolute angles, driven by PhotoMode).
+    this.photo = { yaw: 0.6, pitch: 0.18, dist: 22, fov: 55 };
+    // Fly-by camera anchor.
+    this._flyby = new THREE.Vector3();
+    this._flybyTimer = 0;
+    this._vel = new THREE.Vector3();
   }
 
   setAircraft(typeId) {
@@ -42,8 +48,10 @@ export class CameraRig {
     this._initialized = false;
   }
 
+  /** C key: chase -> cockpit -> fly-by -> chase. */
   toggle() {
-    this.setMode(this.mode === 'chase' ? 'cockpit' : 'chase');
+    const order = ['chase', 'cockpit', 'flyby'];
+    this.setMode(order[(order.indexOf(this.mode) + 1) % order.length]);
   }
 
   setMode(mode) {
@@ -70,10 +78,55 @@ export class CameraRig {
    * @param {THREE.Quaternion} quat aircraft orientation (interpolated)
    * @param {(x:number,z:number)=>number} groundAt terrain height function
    */
-  update(dt, pos, quat, groundAt, look = { yaw: 0, pitch: 0 }) {
+  update(dt, pos, quat, groundAt, look = { yaw: 0, pitch: 0 }, vel = null) {
     const cam = this.camera;
     this._shakeT += dt;
     this.shake = Math.max(0, this.shake - dt * 1.6);
+
+    if (this.mode === 'photo') {
+      const p = this.photo;
+      const cp = Math.cos(p.pitch);
+      cam.position.set(pos.x + Math.sin(p.yaw) * cp * p.dist, pos.y + Math.sin(p.pitch) * p.dist, pos.z + Math.cos(p.yaw) * cp * p.dist);
+      const ground = groundAt(cam.position.x, cam.position.z);
+      if (cam.position.y < ground + 1.5) cam.position.y = ground + 1.5;
+      cam.up.set(0, 1, 0);
+      cam.lookAt(pos);
+      cam.near = 0.3;
+      cam.fov = p.fov;
+      cam.updateProjectionMatrix();
+      cam.updateMatrixWorld();
+      return;
+    }
+
+    if (this.mode === 'flyby') {
+      // Park the camera ahead of the aircraft, beside its path, and watch it pass.
+      this._flybyTimer -= dt;
+      const v = vel || this._vel.set(0, 0, -1).applyQuaternion(quat).multiplyScalar(50);
+      const speed = Math.max(10, Math.hypot(v.x, v.y, v.z));
+      const away = this._flyby.distanceTo(pos);
+      if (!this._initialized || this._flybyTimer <= 0 || away > speed * 7) {
+        const ahead = speed * 3.2;
+        const side = (Math.random() < 0.5 ? -1 : 1) * (18 + Math.random() * 25);
+        const dir = this._vel.copy(v).normalize();
+        const right = this._tmp.set(-dir.z, 0, dir.x).normalize();
+        this._flyby.copy(pos).addScaledVector(dir, ahead).addScaledVector(right, side);
+        this._flyby.y += -6 + Math.random() * 18;
+        const g = groundAt(this._flyby.x, this._flyby.z);
+        if (this._flyby.y < g + 3) this._flyby.y = g + 3;
+        this._flybyTimer = 6.5;
+        this._initialized = true;
+      }
+      cam.position.copy(this._flyby);
+      cam.up.set(0, 1, 0);
+      cam.lookAt(pos);
+      cam.near = 0.5;
+      // Zoom in as the aircraft gets further away (documentary feel).
+      const d = this._flyby.distanceTo(pos);
+      cam.fov = THREE.MathUtils.clamp(2 * Math.atan(14 / Math.max(d, 1)) * THREE.MathUtils.RAD2DEG * 2.2, 18, 70);
+      cam.updateProjectionMatrix();
+      cam.updateMatrixWorld();
+      return;
+    }
 
     if (this.mode === 'cockpit') {
       this.headYaw += (look.yaw * 1.9 - this.headYaw) * Math.min(1, dt * 8);

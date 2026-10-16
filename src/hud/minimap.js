@@ -43,7 +43,7 @@ export class MapRenderer {
       this.tiles.set(key, t);
       this.inFlight++;
       // Map tiles are small (~10 ms); the large map is user-requested so it jumps the queue.
-      this.pool.request({ type: 'maptile', id: key, cx: tx, cz: tz, lod: level, priority: level === 1 ? -5 : 2 });
+      this.pool.request({ type: 'maptile', id: key, cx: tx, cz: tz, lod: level, priority: level === 1 ? -5 : 0.5 });
     }
     t.used = performance.now();
     return t;

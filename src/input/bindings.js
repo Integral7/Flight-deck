@@ -43,7 +43,7 @@ export const CONTROL_HELP = [
   ['B or Space', 'Wheel brakes (hold)'],
   ['G', 'Landing gear (Vortex A-7)'],
   ['V', 'Flaps: up / half / full'],
-  ['C', 'Chase / cockpit camera'],
+  ['C', 'Camera: chase / cockpit / fly-by'],
   ['Mouse drag', 'Look around   ·   Wheel: zoom'],
   ['M', 'Large map'],
   ['T / Y', 'Time of day +1 h / cycle weather'],

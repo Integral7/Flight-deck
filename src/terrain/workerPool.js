@@ -18,6 +18,7 @@ export class TerrainWorkerPool {
     this.onResult = null;
     /** Optional per-message-type handlers (e.g. map tiles) checked before onResult. */
     this.handlers = {};
+    this.depth = 3; // max jobs queued per worker
     try {
       for (let i = 0; i < size; i++) {
         const w = new Worker(new URL('./terrainWorker.js', import.meta.url), { type: 'module' });
@@ -70,9 +71,13 @@ export class TerrainWorkerPool {
       this._dispatch({ type: job.type, id: job.id, job: job.job, data });
       return;
     }
+    // Keep a few jobs queued inside each worker so throughput does not depend
+    // on the frame rate (workers process their messages back to back).
     while (this.idle.length && this.queue.length) {
       const w = this.idle.pop();
       const job = this.queue.shift();
+      w.__load = (w.__load || 0) + 1;
+      if (w.__load < this.depth) this.idle.push(w);
       this.inFlight.set(job.job, job);
       // Post only cloneable fields (jobs may carry a chunk reference).
       w.postMessage({ type: job.type, id: job.id, job: job.job, cx: job.cx, cz: job.cz, lod: job.lod, density: job.density });
@@ -81,7 +86,8 @@ export class TerrainWorkerPool {
 
   _handle(worker, msg) {
     this.inFlight.delete(msg.job);
-    this.idle.push(worker);
+    worker.__load = Math.max(0, (worker.__load || 1) - 1);
+    if (!this.idle.includes(worker)) this.idle.push(worker);
     this._dispatch(msg);
   }
 

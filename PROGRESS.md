@@ -29,8 +29,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 8 | Weather: clouds, fog, rain | ✅ done |
 | 9 | Airports + landing challenge — **PAUSE for user** | ✅ done (user said go) |
 | 10 | Rings + time trial | ✅ done |
-| 11 | Menu (incl. quality), scenic mode, photo mode | ⏳ next |
-| 12 | Headless run, error + frame-time fixes, screenshots | |
+| 11 | Menu (incl. quality), scenic mode, photo mode | ✅ done |
+| 12 | Headless run, error + frame-time fixes, screenshots | ⏳ next |
 | 13 | README incl. "How this was built" | |
 
 ## Done so far
@@ -134,12 +134,25 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   rings. Pause menu has Time trial. `tests/course.test.js` (11, incl. an autopilot
   threading a full course in the trainer). 134 tests green.
 
+- M11: `src/hud/menu.js` (start menu over a scenic backdrop: mode + aircraft cards with
+  stat bars, Low/Medium/High quality, auto-resolution, seed classic/random/custom, time,
+  day-cycle speed, weather, invert pitch, FPS), `src/aircraft/autopilot.js` (terrain-
+  following with look-ahead, heading search to route around terrain it can't out-climb),
+  `src/modes/scenic.js` (invulnerable, autopilot hands back/forth, auto camera cuts,
+  minimal HUD), `src/modes/photo.js` (frozen sim, orbit cam, FOV/EV/time sliders,
+  vignette toggle, PNG capture), camera rig fly-by + photo modes, `game.js` rewritten:
+  runtime `applyQuality` (renderer recreate on AA change + PMREM rebuild, shadows,
+  view distance, clouds, rain, trees), `setSeed` world regeneration, loading gate
+  (holds sim until nearby chunks exist), FPS readout, adaptive resolution, pause menu
+  with quality + main menu. Worker pool now queues up to 3 jobs per worker (was 1 per
+  frame — loading was frame-rate bound). Fixed `setAircraft` calling a removed method.
+  Tests: autopilot (5), settings (8), menu (2). 149 tests green.
+
 ## Next
-- M11: start menu (mode, aircraft, quality Low/Medium/High, seed fixed/random, time of
-  day, weather, day-cycle speed, invert pitch), quality switching at runtime
-  (renderer AA recreate, shadows, view radius, trees, clouds, rain), scenic mode
-  (invulnerable, autopilot assist, minimal HUD, golden hour), photo mode (pause, orbit
-  camera, FOV/exposure/time sliders, hide HUD, save PNG).
+- M12: verification pass in headless Chromium across modes/qualities/aircraft/touch:
+  console errors, CPU timings, draw calls, memory (chunk/geometry counts stable over a
+  long flight), fixes. Polish items: far tree tier (hide tree cut-off line), crash wreck
+  visual (smoke + tilted model), screenshots for the README.
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.
