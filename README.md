@@ -263,9 +263,10 @@ the work tracked CPU time per subsystem, draw calls and triangle counts, and fix
 - Everything in the simulation hot path is allocation-free; shadows and lights never toggle in a
   way that recompiles shaders; adaptive resolution trims the pixel ratio when frame time climbs.
 
-Measured on the medium preset after loading: about 1–2 ms CPU for terrain streaming and
-0.2 ms each for sky, clouds and weather. The scene is roughly 115k triangles and 120 draw calls on
-Low, and 300k triangles and 250 draw calls on Medium.
+Measured CPU cost per frame (software GL, so real machines do better): about 1–2 ms for
+terrain streaming, under 0.3 ms each for sky, clouds and weather, ~0.2 ms for the 120 Hz
+flight model. With forests fully loaded the scene is roughly 115k triangles / 120 draw calls on
+Low and 300k / 250 on Medium.
 
 ### Known limitations
 
