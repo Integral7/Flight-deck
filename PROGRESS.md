@@ -20,8 +20,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | # | Milestone | Status |
 |---|-----------|--------|
 | 1 | Scaffold: Vite, Three.js, Vitest, ESLint, loop, empty scene | ✅ done |
-| 2 | Noise + heightfield, terrain tests | ⏳ next |
-| 3 | Chunked terrain + LOD + worker, water, forests | |
+| 2 | Noise + heightfield, terrain tests | ✅ done |
+| 3 | Chunked terrain + LOD + worker, water, forests | ⏳ next |
 | 4 | Flight model + tests, aircraft meshes, chase camera | |
 | 5 | Input: keyboard + touch — **PAUSE for user** | |
 | 6 | Cockpit + instruments, HUD, minimap | |
@@ -41,9 +41,18 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   console errors + `window.__flightdeck.debugStats()`, writes `screenshots/<name>.png`.
 - Quality presets (low/medium/high) defined in `src/engine/settings.js`.
 
+- M2: `src/engine/random.js` (mulberry32, hash2, simplex, fbm, soft-crest ridged),
+  `src/terrain/heightfield.js` — `createTerrain(seed)` with `sample/heightAt/normalAt/
+  biome/forestDensity/airportForCell/airportsNear/nearestAirport`. Rivers are carved
+  inside the heightfield (zero-contour of a noise field, distance = |n|/|grad n|), airports
+  are flattened pads (one per 7 km cell, flatness-checked). `tests/noise.test.js`,
+  `tests/terrain.test.js` (29 tests total, all green).
+- `scripts/terrain-map.mjs [seed] [size] [px] [out]` renders a biome map PNG + stats.
+
 ## Next
-- M2: `src/engine/random.js` (seeded PRNG + simplex), `src/terrain/heightfield.js`
-  (pure function, no three.js), `src/terrain/rivers.js`, `tests/terrain.test.js`.
+- M3: `src/terrain/chunk.js` (mesh arrays from heightfield, skirts, vertex colours),
+  `chunkManager.js` (rings, LOD, worker pool, per-frame upload budget),
+  `terrainWorker.js`, `water.js`, `vegetation.js` (instanced trees). Tests for chunk seams.
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~20) is not representative.
