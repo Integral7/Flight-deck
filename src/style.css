@@ -251,3 +251,14 @@ body.touch-mode .minimap { top: 60px; width: 120px; }
 .ha-loc .ha-dot { top: 50%; }
 .ha-read { font: 600 11px var(--mono); color: var(--hud-dim); text-align: center; line-height: 1.4; }
 body.touch-mode .hud-approach { right: 90px; top: 46%; width: 104px; padding: 6px; }
+
+/* Target marker (time-trial next gate) */
+.target-marker { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 12; }
+.tm-ring { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border: 2px solid var(--accent); border-radius: 50%; box-shadow: 0 0 10px rgba(246,196,83,0.6); }
+.tm-arrow { position: absolute; left: 0; top: 0; width: 0; height: 0; border-left: 11px solid transparent; border-right: 11px solid transparent; border-bottom: 20px solid var(--accent); display: none; filter: drop-shadow(0 0 6px rgba(0,0,0,0.6)); }
+.target-marker.off .tm-ring { display: none; }
+.target-marker.off .tm-arrow { display: block; }
+.tm-label { position: absolute; left: 22px; top: -8px; font: 700 12px var(--mono); color: var(--accent); text-shadow: 0 1px 3px #000; white-space: nowrap; }
+.target-marker.off .tm-label { left: 18px; top: 10px; }
+.hi-body .timer { font: 700 26px var(--mono); letter-spacing: -0.02em; color: var(--hud); }
+.hi-body .timer.pen { color: var(--warn); }

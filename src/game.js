@@ -14,8 +14,11 @@ import { Rain } from './world/rain.js';
 import { AirportRenderer } from './world/airports.js';
 import { FreeFlightMode } from './modes/freeFlight.js';
 import { LandingMode } from './modes/landing.js';
+import { TimeTrialMode } from './modes/timeTrial.js';
+import { RingRenderer } from './world/rings.js';
+import { TargetMarker } from './hud/targetMarker.js';
 
-const MODES = { free: FreeFlightMode, landing: LandingMode };
+const MODES = { free: FreeFlightMode, landing: LandingMode, timetrial: TimeTrialMode };
 import { Aircraft } from './aircraft/aircraft.js';
 import { AIRCRAFT, AIRCRAFT_IDS } from './aircraft/types.js';
 import { CameraRig } from './camera/cameras.js';
@@ -96,6 +99,8 @@ export class Game {
     };
 
     this.airports = new AirportRenderer(this.scene, this.terrain);
+    this.rings = new RingRenderer(this.scene);
+    this.marker = new TargetMarker(container);
     this.setMode(MODES[params.get('mode')] ? params.get('mode') : 'free');
     this._last = performance.now();
     this._frame = this._frame.bind(this);
@@ -268,6 +273,7 @@ export class Game {
        <div class="row">
          <button class="btn ${this.mode.name === 'free' ? 'primary' : ''}" data-mode="free">Free flight</button>
          <button class="btn ${this.mode.name === 'landing' ? 'primary' : ''}" data-mode="landing">Landing challenge</button>
+         <button class="btn ${this.mode.name === 'timetrial' ? 'primary' : ''}" data-mode="timetrial">Time trial</button>
        </div>
        <h3 class="sub">Aircraft</h3>
        <div class="row">${AIRCRAFT_IDS.map((id) => `<button class="btn ${this.aircraft.type.id === id ? 'primary' : ''}" data-aircraft="${id}">${AIRCRAFT[id].name}</button>`).join('')}</div>`,
@@ -398,6 +404,7 @@ export class Game {
     const nearest = this.terrain.nearestAirport(p.x, p.z);
     for (const ap of list) ap.active = ap === nearest;
     this.world.airports = list;
+    this.world.rings = this.mode.mapRings?.() ?? [];
     this.nearestAirport = nearest;
     if (this.mode.target) this.world.target = this.mode.target;
     else if (nearest) this.world.target = { x: nearest.x, z: nearest.z, label: nearest.name.code };
@@ -419,6 +426,10 @@ export class Game {
     this.cockpit.update(dt, s, controls, bug);
     this.hud.update({ dt, state: s, controls, bug, world: this.world, groundAt: this._groundFn });
     this.hud.setApproach(this.mode.approach?.() ?? null);
+    const mk = this.hud.visible ? this.mode.marker?.() : null;
+    if (mk) this.marker.update(this.camera, mk.target, mk.text);
+    else this.marker.hide();
+    this.rings.update(dt, this.mode.next ?? 0);
     const info = this.mode.info();
     if (info) this.hud.setInfo(info.title, info.body + this._conditionsLine());
     else {

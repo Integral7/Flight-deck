@@ -27,9 +27,9 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 6 | Cockpit + instruments, HUD, minimap | ✅ done |
 | 7 | Sky, day/night, lighting polish | ✅ done |
 | 8 | Weather: clouds, fog, rain | ✅ done |
-| 9 | Airports + landing challenge — **PAUSE for user** | ✅ done — ⏸ waiting for user go-ahead |
-| 10 | Rings + time trial | next (after go-ahead) |
-| 11 | Menu (incl. quality), scenic mode, photo mode | |
+| 9 | Airports + landing challenge — **PAUSE for user** | ✅ done (user said go) |
+| 10 | Rings + time trial | ✅ done |
+| 11 | Menu (incl. quality), scenic mode, photo mode | ⏳ next |
 | 12 | Headless run, error + frame-time fixes, screenshots | |
 | 13 | README incl. "How this was built" | |
 
@@ -125,11 +125,21 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   in crosswind) — now air-only + static friction when parked. `tests/landing.test.js`
   (14, incl. an autopilot flying the glide path to a scored landing). 123 tests green.
 
+- M10: `src/modes/course.js` (pure: seeded 12-ring course with S-curves, terrain
+  clearance, two-way gradient limiting ≤16 %, ring normals; `ringCrossing` plane-crossing
+  hit/miss with interpolation; time formatting/penalties), `src/world/rings.js` (torus
+  gates, pulsing next ring, finish ring white), `src/hud/targetMarker.js` (screen-space
+  reticle/edge arrow with distance), `src/modes/timeTrial.js` (clock starts at ring 1,
+  +5 s per miss, best per aircraft+course in localStorage, Next course). Minimap shows
+  rings. Pause menu has Time trial. `tests/course.test.js` (11, incl. an autopilot
+  threading a full course in the trainer). 134 tests green.
+
 ## Next
-- **Paused after M9 for the user's go-ahead** (summary + Windows commands given).
-- Then M10: `src/world/rings.js` + `src/modes/timeTrial.js` (seeded ring course, gate
-  detection by segment-vs-disc crossing, timer, penalties, best times per aircraft,
-  next-ring arrow), tests.
+- M11: start menu (mode, aircraft, quality Low/Medium/High, seed fixed/random, time of
+  day, weather, day-cycle speed, invert pitch), quality switching at runtime
+  (renderer AA recreate, shadows, view radius, trees, clouds, rain), scenic mode
+  (invulnerable, autopilot assist, minimal HUD, golden hour), photo mode (pause, orbit
+  camera, FOV/exposure/time sliders, hide HUD, save PNG).
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.
