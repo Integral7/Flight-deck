@@ -9,7 +9,7 @@
  * Set CHROMIUM_PATH to use a specific browser binary. Software WebGL makes
  * absolute FPS meaningless here; use draw calls / triangles / sim timings.
  */
-import { createServer } from 'vite';
+import { createServer, preview } from 'vite';
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync } from 'node:fs';
 
@@ -22,8 +22,11 @@ const height = Number(process.env.H ?? 720);
 const candidates = [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium'].filter(Boolean);
 const executablePath = candidates.find((p) => existsSync(p));
 
-const server = await createServer({ server: { port: 5199, host: '127.0.0.1' }, logLevel: 'error' });
-await server.listen();
+// PREVIEW=1 serves the production build from dist/ (run `npm run build` first).
+const server = process.env.PREVIEW
+  ? await preview({ preview: { port: 5199, host: '127.0.0.1' }, logLevel: 'error' })
+  : await createServer({ server: { port: 5199, host: '127.0.0.1' }, logLevel: 'error' });
+if (!process.env.PREVIEW) await server.listen();
 const url = `http://127.0.0.1:5199/?${query}`;
 
 const browser = await chromium.launch({
@@ -62,5 +65,5 @@ await page.screenshot({ path: `screenshots/${name}.png` });
 const stats = await page.evaluate(() => (window.__flightdeck?.debugStats ? window.__flightdeck.debugStats() : null));
 console.log(JSON.stringify({ url, stats, errors }, null, 2));
 await browser.close();
-await server.close();
+await (server.close ? server.close() : server.httpServer.close());
 process.exit(errors.some((e) => e.startsWith('[pageerror]') || e.startsWith('[error]')) ? 1 : 0);

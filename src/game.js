@@ -9,6 +9,9 @@ import { Water } from './world/water.js';
 import { Aircraft } from './aircraft/aircraft.js';
 import { CameraRig } from './camera/cameras.js';
 import { Input } from './input/input.js';
+import { TouchControls } from './input/touch.js';
+import { Overlay } from './hud/overlay.js';
+import { FlightStrip } from './hud/flightStrip.js';
 
 const SIM_STEP = 1 / 120;
 
@@ -39,6 +42,11 @@ export class Game {
     this.time = 0;
     this.paused = false;
     this.forward = new THREE.Vector3();
+
+    this.overlay = new Overlay(container);
+    this.strip = new FlightStrip(container);
+    this.touch = new TouchControls(container, this.input, { force: params.get('touch') === '1' });
+    this.crashTimer = 0;
 
     this._setupLights();
     this._createWorld(this.settings.resolveSeed());
@@ -153,18 +161,42 @@ export class Game {
     for (const a of this.input.consume()) {
       const c = this.input.controls;
       const T = this.aircraft.type;
+      // While a modal is open only pause/help/confirm do anything.
+      if (this.overlay.modalOpen) {
+        if (a === 'pause' || (a === 'help' && this.overlay.modalOpen === 'help')) this.resume();
+        continue;
+      }
       switch (a) {
+        case 'pause':
+          this.pause();
+          break;
+        case 'help':
+          this.showHelp();
+          break;
         case 'camera':
           this.rig.toggle();
+          this.overlay.toast(this.rig.mode === 'cockpit' ? 'Cockpit view' : 'Chase view');
           break;
         case 'reset':
-          this.spawnFree();
+          this.restart();
+          break;
+        case 'confirm':
+          if (this.aircraft.state.crashed && this.crashTimer > 0.6) this.restart();
           break;
         case 'gear':
-          if (T.retractableGear) c.gearDown = !c.gearDown;
+          if (!T.retractableGear) this.overlay.toast(`${T.name}: fixed landing gear`);
+          else if (this.aircraft.state.onGround) this.overlay.toast('Gear locked on the ground', 'warn');
+          else {
+            c.gearDown = !c.gearDown;
+            this.overlay.toast(c.gearDown ? 'Gear down' : 'Gear up');
+          }
           break;
         case 'flaps':
-          if (T.hasFlaps) c.flaps = c.flaps >= 1 ? 0 : c.flaps + 0.5;
+          if (!T.hasFlaps) this.overlay.toast(`${T.name}: no flaps`);
+          else {
+            c.flaps = c.flaps >= 1 ? 0 : c.flaps + 0.5;
+            this.overlay.toast(`Flaps ${['up', 'half', 'full'][c.flaps * 2]}`);
+          }
           break;
         case 'fps':
           this.settings.set('showFps', !this.settings.get('showFps'));
@@ -173,6 +205,59 @@ export class Game {
           break;
       }
     }
+  }
+
+  pause() {
+    if (this.overlay.modalOpen) return;
+    this.paused = true;
+    this.input.reset();
+    this.overlay.openModal(
+      'pause',
+      `<h2>Paused</h2>
+       <p class="muted">${this.aircraft.type.name} · seed ${this.seed}</p>
+       <div class="row">
+         <button class="btn primary" data-act="resume">Resume <kbd>Esc</kbd></button>
+         <button class="btn" data-act="restart">Restart flight <kbd>R</kbd></button>
+         <button class="btn" data-act="help">Controls <kbd>H</kbd></button>
+       </div>`,
+      () => this._afterModal(),
+    );
+    this.overlay.modal.querySelector('[data-act=resume]').onclick = () => this.resume();
+    this.overlay.modal.querySelector('[data-act=restart]').onclick = () => {
+      this.resume();
+      this.restart();
+    };
+    this.overlay.modal.querySelector('[data-act=help]').onclick = () => {
+      this.overlay.closeModal();
+      this.showHelp();
+    };
+  }
+
+  showHelp() {
+    this.paused = true;
+    this.input.reset();
+    this.overlay.openModal(
+      'help',
+      this.overlay.helpHTML() + '<div class="row"><button class="btn primary" data-act="close">Back to flying <kbd>Esc</kbd></button></div>',
+      () => this._afterModal(),
+    );
+    this.overlay.modal.querySelector('[data-act=close]').onclick = () => this.resume();
+  }
+
+  resume() {
+    this.overlay.closeModal();
+  }
+
+  _afterModal() {
+    this.paused = false;
+    this.input.reset();
+    this.loop.reset();
+  }
+
+  restart() {
+    this.overlay.hideBanner();
+    this.crashTimer = 0;
+    this.spawnFree();
   }
 
   _frame(now) {
@@ -191,6 +276,7 @@ export class Game {
       alpha = r.alpha;
     }
     for (const e of this.aircraft.drainEvents()) this.onFlightEvent(e);
+    if (this.aircraft.state.crashed) this.crashTimer += dt;
     const t1 = performance.now();
 
     this.aircraft.render(alpha, controls, dt, this.time);
@@ -213,6 +299,8 @@ export class Game {
     this.timing.sim += (t1 - t0 - this.timing.sim) * k;
     this.timing.world += (t2 - t1 - this.timing.world) * k;
     this.timing.render += (t3 - t2 - this.timing.render) * k;
+    this.strip.update(this.aircraft.state, controls);
+    this.touch.update(controls);
     this.onFrame?.(dt);
   }
 
@@ -225,7 +313,16 @@ export class Game {
 
   onFlightEvent(e) {
     if (e.type === 'touchdown') this.rig.bump(Math.min(1, Math.abs(e.vs) / 4));
-    if (e.type === 'crash') this.rig.bump(1.2);
+    if (e.type === 'crash') {
+      this.rig.bump(1.2);
+      this.overlay.showBanner({
+        kind: 'bad',
+        kicker: 'Crash',
+        title: e.reason,
+        body: 'The aircraft is a write-off. Shake it off and go again.',
+        actions: [{ label: 'Restart', key: 'R', primary: true, onClick: () => this.restart() }],
+      });
+    }
     this.onEvent?.(e);
   }
 

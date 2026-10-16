@@ -415,6 +415,7 @@ function crash(s, reason) {
   s.vel.set(0, 0, 0);
   s.angVel.set(0, 0, 0);
   s.events.push({ type: 'crash', reason, x: s.pos.x, z: s.pos.z });
+  updateDerived(s, null, 0, 0, 0);
   return s;
 }
 

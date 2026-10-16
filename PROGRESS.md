@@ -23,8 +23,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 2 | Noise + heightfield, terrain tests | ✅ done |
 | 3 | Chunked terrain + LOD + worker, water, forests | ✅ done |
 | 4 | Flight model + tests, aircraft meshes, chase camera | ✅ done |
-| 5 | Input: keyboard + touch — **PAUSE for user** | ⏳ next |
-| 6 | Cockpit + instruments, HUD, minimap | |
+| 5 | Input: keyboard + touch — **PAUSE for user** | ✅ done — ⏸ waiting for user go-ahead |
+| 6 | Cockpit + instruments, HUD, minimap | next (after go-ahead) |
 | 7 | Sky, day/night, lighting polish | |
 | 8 | Weather: clouds, fog, rain | |
 | 9 | Airports + landing challenge — **PAUSE for user** | |
@@ -72,9 +72,17 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   Ctrl+W closes the tab), digits set throttle, B/Space brakes, G gear, V flaps, C camera,
   R reset.
 
+- M5: `src/input/touch.js` (pointer-event stick with dead zone + expo, throttle slider,
+  rudder/brake hold buttons, action buttons, drag-to-look; auto-enables on coarse pointer
+  or first touch; `?touch=1` forces it), `src/hud/overlay.js` (toasts, banner, modal),
+  `src/hud/flightStrip.js` (temporary text HUD), pause/help/crash/restart flow in
+  `game.js`. `tests/input.test.js` (12 tests). 80 tests total, green. Production build +
+  worker verified with `PREVIEW=1 node scripts/smoke.mjs`. README has run instructions.
+
 ## Next
-- M5: `src/input/touch.js` (virtual stick + throttle slider + buttons), pause/help overlay,
-  crash/reset flow, input tests. Then **PAUSE** and give the user Windows run commands.
+- **Paused after M5 for the user's go-ahead** (summary + Windows commands given).
+- Then M6: 3D cockpit interior + canvas instruments (ASI, altimeter, attitude, heading,
+  VSI), HUD overlay for chase view, minimap.
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.
@@ -82,6 +90,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 - Visible line where instanced trees stop (tree radius). Polish idea: far tree tier
   with low-poly/billboard trees at reduced density (M12).
 - Colours look washed out; lighting/tone tuning planned for M7.
+- Crashed aircraft has no wreck visual yet (idea: smoke particles + tilted model, M12).
+- In cockpit view the exterior glass/fuselage is hidden; a proper interior comes in M6.
 
 ## Commands
 - `npm install`, `npm run dev`, `npm test`, `npm run lint`, `npm run build`
