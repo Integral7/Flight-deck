@@ -1,5 +1,6 @@
 import { createTerrain } from './heightfield.js';
 import { buildChunk, buildTrees } from './chunk.js';
+import { buildMapTile } from './mapTile.js';
 
 /**
  * A small pool of terrain workers with a priority queue. Falls back to
@@ -15,6 +16,8 @@ export class TerrainWorkerPool {
     this.workers = [];
     this.idle = [];
     this.onResult = null;
+    /** Optional per-message-type handlers (e.g. map tiles) checked before onResult. */
+    this.handlers = {};
     try {
       for (let i = 0; i < size; i++) {
         const w = new Worker(new URL('./terrainWorker.js', import.meta.url), { type: 'module' });
@@ -61,8 +64,10 @@ export class TerrainWorkerPool {
       const data =
         job.type === 'chunk'
           ? buildChunk(this.fallback, job.cx, job.cz, job.lod)
-          : buildTrees(this.fallback, job.cx, job.cz, job.density);
-      this.onResult?.({ type: job.type, id: job.id, job: job.job, data });
+          : job.type === 'maptile'
+            ? buildMapTile(this.fallback, job.cx, job.cz, job.lod)
+            : buildTrees(this.fallback, job.cx, job.cz, job.density);
+      this._dispatch({ type: job.type, id: job.id, job: job.job, data });
       return;
     }
     while (this.idle.length && this.queue.length) {
@@ -77,7 +82,13 @@ export class TerrainWorkerPool {
   _handle(worker, msg) {
     this.inFlight.delete(msg.job);
     this.idle.push(worker);
-    this.onResult?.(msg);
+    this._dispatch(msg);
+  }
+
+  _dispatch(msg) {
+    const h = this.handlers[msg.type];
+    if (h) h(msg);
+    else this.onResult?.(msg);
   }
 
   dispose() {

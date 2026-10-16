@@ -12,6 +12,9 @@ import { Input } from './input/input.js';
 import { TouchControls } from './input/touch.js';
 import { Overlay } from './hud/overlay.js';
 import { FlightStrip } from './hud/flightStrip.js';
+import { HUD } from './hud/hud.js';
+import { MapRenderer } from './hud/minimap.js';
+import { Cockpit } from './cockpit/cockpit.js';
 
 const SIM_STEP = 1 / 120;
 
@@ -52,6 +55,15 @@ export class Game {
     this._createWorld(this.settings.resolveSeed());
     this.aircraft = new Aircraft(this.scene, this.settings.get('aircraft'));
     this.rig.setAircraft(this.aircraft.type.id);
+    this.cockpit = new Cockpit(this.settings.get('quality'));
+    this.cockpit.attach(this.aircraft.model, this.aircraft.type);
+
+    this.mapRenderer = new MapRenderer(this.chunks.pool, this.terrain);
+    this.hud = new HUD(container, this.mapRenderer);
+    this.strip.setVisible(false);
+    this.world = { airports: [], rings: [], target: null };
+    this._worldTimer = 0;
+    this._groundFn = (x, z) => Math.max(this.terrain.heightAt(x, z), SEA_LEVEL);
 
     this._groundSample = { height: 0, water: false, normalY: 1, runway: false };
     this._normal = [0, 1, 0];
@@ -154,6 +166,7 @@ export class Game {
     this.settings.set('aircraft', id);
     this.aircraft.setType(id);
     this.rig.setAircraft(id);
+    this.cockpit.attach(this.aircraft.model, this.aircraft.type);
     this.spawnFree();
   }
 
@@ -197,6 +210,12 @@ export class Game {
             c.flaps = c.flaps >= 1 ? 0 : c.flaps + 0.5;
             this.overlay.toast(`Flaps ${['up', 'half', 'full'][c.flaps * 2]}`);
           }
+          break;
+        case 'map':
+          this.hud.largeMap.toggle();
+          break;
+        case 'hud':
+          this.hud.setVisible(!this.hud.visible);
           break;
         case 'fps':
           this.settings.set('showFps', !this.settings.get('showFps'));
@@ -299,9 +318,47 @@ export class Game {
     this.timing.sim += (t1 - t0 - this.timing.sim) * k;
     this.timing.world += (t2 - t1 - this.timing.world) * k;
     this.timing.render += (t3 - t2 - this.timing.render) * k;
-    this.strip.update(this.aircraft.state, controls);
+    this._updateHud(dt, controls);
     this.touch.update(controls);
     this.onFrame?.(dt);
+  }
+
+  /** Refresh map overlays (airports, target) about once a second. */
+  _updateWorldInfo(dt) {
+    this._worldTimer -= dt;
+    if (this._worldTimer > 0) return;
+    this._worldTimer = 1;
+    const p = this.aircraft.state.pos;
+    const list = this.terrain.airportsNear(p.x, p.z, 26000);
+    const nearest = this.terrain.nearestAirport(p.x, p.z);
+    for (const ap of list) ap.active = ap === nearest;
+    this.world.airports = list;
+    if (!this.modeTarget && nearest) {
+      this.world.target = { x: nearest.x, z: nearest.z, label: nearest.name.code };
+      this.nearestAirport = nearest;
+    }
+  }
+
+  _updateHud(dt, controls) {
+    this._updateWorldInfo(dt);
+    const s = this.aircraft.state;
+    const t = this.world.target;
+    const bug = t ? Math.atan2(t.x - s.pos.x, -(t.z - s.pos.z)) : null;
+    const cockpit = this.rig.mode === 'cockpit';
+    this.hud.setView(this.rig.mode);
+    this.cockpit.setVisible(cockpit);
+    this.cockpit.update(dt, s, controls, bug);
+    this.hud.update({ dt, state: s, controls, bug, world: this.world, groundAt: this._groundFn });
+    if (!this.modeInfo) {
+      const ap = this.nearestAirport;
+      const d = ap ? Math.hypot(ap.x - s.pos.x, ap.z - s.pos.z) : 0;
+      this.hud.setInfo(
+        'Free flight',
+        ap
+          ? `<div>${ap.name.full} <span class="dim">${ap.name.code}</span></div><div class="dim">${(d / 1852).toFixed(1)} nm · field elev ${Math.round(ap.elevation * 3.28084)} ft</div>`
+          : '',
+      );
+    }
   }
 
   _updateSun() {

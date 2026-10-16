@@ -23,9 +23,9 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 2 | Noise + heightfield, terrain tests | ✅ done |
 | 3 | Chunked terrain + LOD + worker, water, forests | ✅ done |
 | 4 | Flight model + tests, aircraft meshes, chase camera | ✅ done |
-| 5 | Input: keyboard + touch — **PAUSE for user** | ✅ done — ⏸ waiting for user go-ahead |
-| 6 | Cockpit + instruments, HUD, minimap | next (after go-ahead) |
-| 7 | Sky, day/night, lighting polish | |
+| 5 | Input: keyboard + touch — **PAUSE for user** | ✅ done (user said go) |
+| 6 | Cockpit + instruments, HUD, minimap | ✅ done |
+| 7 | Sky, day/night, lighting polish | ⏳ next |
 | 8 | Weather: clouds, fog, rain | |
 | 9 | Airports + landing challenge — **PAUSE for user** | |
 | 10 | Rings + time trial | |
@@ -79,10 +79,22 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   `game.js`. `tests/input.test.js` (12 tests). 80 tests total, green. Production build +
   worker verified with `PREVIEW=1 node scripts/smoke.mjs`. README has run instructions.
 
+- M6: `src/hud/instruments.js` (canvas ASI w/ colour arcs from aero data, attitude,
+  altimeter, turn coordinator + slip ball, heading w/ bug, VSI, status column; pure needle
+  mappings), `instrumentPanel.js` (row layout for chase HUD, six-pack for cockpit),
+  `src/cockpit/cockpit.js` (3D interior parented to the model: CanvasTexture panel,
+  glareshield, frame, yoke/stick + throttle animated), `src/hud/warnings.js` (STALL,
+  PULL UP via 2–8 s path probe, SINK RATE, GEAR UP, OVERSPEED, BANK ANGLE),
+  `src/terrain/mapTile.js` + worker 'maptile' jobs, `src/hud/minimap.js` (tile cache,
+  heading-up circular minimap, large north-up map on M with labels + zoom),
+  `src/hud/hud.js`. `tests/hud.test.js` (12). 92 tests total, green.
+- `scripts/smoke.mjs` also supports `EVAL=` (run JS mid-way), `PRINT=` (dump expression),
+  `PREVIEW=1`, `TOUCH=1`, `KEYS=KeyW:500,...`.
+
 ## Next
-- **Paused after M5 for the user's go-ahead** (summary + Windows commands given).
-- Then M6: 3D cockpit interior + canvas instruments (ASI, altimeter, attitude, heading,
-  VSI), HUD overlay for chase view, minimap.
+- M7: `src/world/sky.js` (sky dome shader, sun/moon, stars), `dayNight.js` (sun path,
+  light colours, fog colour, exposure, env map for water), lighting polish (colour
+  grading, shadows following aircraft), night lights (runway later).
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.

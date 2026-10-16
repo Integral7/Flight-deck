@@ -4,6 +4,7 @@
  */
 import { createTerrain } from './heightfield.js';
 import { buildChunk, buildTrees } from './chunk.js';
+import { buildMapTile } from './mapTile.js';
 
 let terrain = null;
 
@@ -25,5 +26,8 @@ self.onmessage = (e) => {
   } else if (msg.type === 'trees') {
     const trees = buildTrees(terrain, msg.cx, msg.cz, msg.density);
     self.postMessage({ type: 'trees', id: msg.id, job: msg.job, data: trees }, [trees.buffer]);
+  } else if (msg.type === 'maptile') {
+    const px = buildMapTile(terrain, msg.cx, msg.cz, msg.lod);
+    self.postMessage({ type: 'maptile', id: msg.id, job: msg.job, data: px }, [px.buffer]);
   }
 };

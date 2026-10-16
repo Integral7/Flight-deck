@@ -165,6 +165,7 @@ export function createAircraftModel(type) {
       const strut = add(new THREE.CylinderGeometry(0.045, 0.045, len, 6), dark, root);
       strut.position.set(side * half * 0.28, (W.y - 0.45) / 2, W.z + 0.05);
       strut.rotation.z = side * Math.atan2(half * 0.55, W.y + 0.45);
+      strut.userData.exteriorOnly = true;
     }
   }
 
@@ -295,7 +296,8 @@ export function animateAircraft(model, state, controls, dt, time) {
   p.prop.rotation.z += Math.min(omega * dt, 1.1); // cap to avoid stroboscopic freeze
   const blur = THREE.MathUtils.clamp((rpm - 900) / 1200, 0, 1);
   p.propDisc.material.opacity = 0.05 + blur * 0.2;
-  p.prop.visible = blur < 0.98 || Math.floor(time * 60) % 3 !== 0;
+  // Above ~1300 rpm the eye only sees the disc, not individual blades.
+  p.prop.visible = blur < 0.35;
 
   // Gear retraction: legs fold inward into the wing / nose.
   if (T.retractableGear) {

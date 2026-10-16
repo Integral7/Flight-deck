@@ -63,7 +63,9 @@ if (process.env.EVAL) {
 mkdirSync('screenshots', { recursive: true });
 await page.screenshot({ path: `screenshots/${name}.png` });
 const stats = await page.evaluate(() => (window.__flightdeck?.debugStats ? window.__flightdeck.debugStats() : null));
-console.log(JSON.stringify({ url, stats, errors }, null, 2));
+// PRINT=<expression> evaluates extra debug output in the page.
+const extra = process.env.PRINT ? await page.evaluate(process.env.PRINT) : undefined;
+console.log(JSON.stringify({ url, stats, extra, errors }, null, 2));
 await browser.close();
 await (server.close ? server.close() : server.httpServer.close());
 process.exit(errors.some((e) => e.startsWith('[pageerror]') || e.startsWith('[error]')) ? 1 : 0);

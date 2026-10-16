@@ -172,8 +172,8 @@ export function createTerrain(seed = 1337) {
     const b = ['field', ' Valley', ' Ridge', ' Point', ' Meadows', ' Hollow', 'brook', ' Crossing', ' Downs', ' Flats'];
     const h1 = Math.floor(hash2(ci, cj, seed + 77) * a.length);
     const h2 = Math.floor(hash2(cj, ci, seed + 78) * b.length);
-    const code = String.fromCharCode(65 + (Math.abs(ci * 7 + cj * 13) % 26), 65 + (Math.abs(ci * 3 - cj * 5) % 26));
-    return { full: a[h1] + b[h2], code: 'K' + code + String.fromCharCode(65 + (Math.abs(ci + cj * 11) % 26)) };
+    const letter = (k) => String.fromCharCode(65 + Math.floor(hash2(ci, cj, seed + 90 + k) * 26));
+    return { full: a[h1] + b[h2], code: 'K' + letter(1) + letter(2) + letter(3) };
   }
 
   /** Airport-local coordinates: u along the runway, v across it. */

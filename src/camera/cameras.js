@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 const CHASE_DISTANCE = { trainer: 17, aerobatic: 14, bush: 21 };
-const EYE = {
+export const EYE = {
   trainer: new THREE.Vector3(-0.32, 0.62, -1.15),
   aerobatic: new THREE.Vector3(0, 0.78, -0.75),
   bush: new THREE.Vector3(-0.38, 0.85, -1.45),
@@ -80,7 +80,8 @@ export class CameraRig {
       this.headPitch += (look.pitch * 0.9 - this.headPitch) * Math.min(1, dt * 8);
       const eye = EYE[this.typeId] || EYE.trainer;
       cam.position.copy(eye).applyQuaternion(quat).add(pos);
-      this._e.set(this.headPitch, this.headYaw, 0, 'YXZ');
+      // Default eye line looks slightly down so the panel and horizon share the view.
+      this._e.set(this.headPitch - 0.1, this.headYaw, 0, 'YXZ');
       this._q.setFromEuler(this._e);
       cam.quaternion.copy(quat).multiply(this._q);
       cam.near = 0.08;
