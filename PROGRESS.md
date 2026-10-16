@@ -27,8 +27,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 6 | Cockpit + instruments, HUD, minimap | ✅ done |
 | 7 | Sky, day/night, lighting polish | ✅ done |
 | 8 | Weather: clouds, fog, rain | ✅ done |
-| 9 | Airports + landing challenge — **PAUSE for user** | ⏳ next |
-| 10 | Rings + time trial | |
+| 9 | Airports + landing challenge — **PAUSE for user** | ✅ done — ⏸ waiting for user go-ahead |
+| 10 | Rings + time trial | next (after go-ahead) |
 | 11 | Menu (incl. quality), scenic mode, photo mode | |
 | 12 | Headless run, error + frame-time fixes, screenshots | |
 | 13 | README incl. "How this was built" | |
@@ -111,11 +111,25 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   108 tests green. Profiled (high, rain, SwiftShader): chunks 1.25 ms, hud 1.7 ms,
   env 0.25 ms, clouds 0.24 ms avg per frame.
 
+- M9: `src/modes/runway.js` (pure: local/world frames, runway numbers, thresholds,
+  into-wind end selection, ILS-style guidance, PAPI, `scoreLanding` 0–100 + grade),
+  `src/world/airports.js` (streamed scenery: canvas-textured runway with numbers, piano
+  keys, aiming/TDZ marks; overruns, apron, taxiways, hangars, tower, wind-driven windsock,
+  fixed-pixel-size edge/threshold/end/approach lights brighter at night, working PAPI
+  for both ends), `src/modes/{freeFlight,landing}.js` (mode interface: start/restart/
+  update/onEvent/info/approach/target/invulnerable), landing mode picks into-wind end
+  with terrain clearance, spawns 3.6 km out on the 3° path, tracks touchdown/bounces/
+  rollout, scores and saves best per aircraft. HUD approach widget (GS + LOC diamonds).
+  Pause menu switches mode + aircraft. `?mode=landing`. Cockpit dash lowered (~15°
+  over-nose view). Fixed: arcade side-grip acted on the ground (parked aircraft drifted
+  in crosswind) — now air-only + static friction when parked. `tests/landing.test.js`
+  (14, incl. an autopilot flying the glide path to a scored landing). 123 tests green.
+
 ## Next
-- M9: `src/world/airports.js` (runway mesh w/ markings + numbers, taxiway/apron, hangars,
-  windsock, approach/edge lights at night, PAPI), `src/modes/landing.js` (spawn on final,
-  scoring: touchdown VS, centreline, bank, touchdown zone, stop on runway; grades),
-  landing tests. Then **PAUSE** with summary + Windows commands.
+- **Paused after M9 for the user's go-ahead** (summary + Windows commands given).
+- Then M10: `src/world/rings.js` + `src/modes/timeTrial.js` (seeded ring course, gate
+  detection by segment-vs-disc crossing, timer, penalties, best times per aircraft,
+  next-ring arrow), tests.
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.
