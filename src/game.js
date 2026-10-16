@@ -11,7 +11,13 @@ import { formatClock } from './world/dayNight.js';
 import { Weather, WEATHER_PRESETS } from './world/weather.js';
 import { Clouds } from './world/clouds.js';
 import { Rain } from './world/rain.js';
+import { AirportRenderer } from './world/airports.js';
+import { FreeFlightMode } from './modes/freeFlight.js';
+import { LandingMode } from './modes/landing.js';
+
+const MODES = { free: FreeFlightMode, landing: LandingMode };
 import { Aircraft } from './aircraft/aircraft.js';
+import { AIRCRAFT, AIRCRAFT_IDS } from './aircraft/types.js';
 import { CameraRig } from './camera/cameras.js';
 import { Input } from './input/input.js';
 import { TouchControls } from './input/touch.js';
@@ -89,7 +95,8 @@ export class Game {
       invulnerable: false,
     };
 
-    this.spawnFree();
+    this.airports = new AirportRenderer(this.scene, this.terrain);
+    this.setMode(MODES[params.get('mode')] ? params.get('mode') : 'free');
     this._last = performance.now();
     this._frame = this._frame.bind(this);
     requestAnimationFrame(this._frame);
@@ -149,18 +156,26 @@ export class Game {
     return { x, z, heading, maxH: best.maxH };
   }
 
-  /** Free flight: airborne a few km from the home airport, pointed at it. */
-  spawnFree() {
-    const ap = this.home || { x: 0, z: 0, elevation: 0 };
-    const a = this.findApproach(ap, 3500);
-    const ground = Math.max(this.terrain.heightAt(a.x, a.z), SEA_LEVEL);
-    const y = Math.max(ground + 400, a.maxH + 250);
-    this.aircraft.placeInAir({ x: a.x, y, z: a.z, heading: a.heading, speed: this.aircraft.type.cruiseSpeed, throttle: 0.65 });
-    this.input.controls.throttle = 0.65;
-    this.input.controls.flaps = 0;
-    this.input.controls.gearDown = !this.aircraft.type.retractableGear;
+  /** Neutral controls after a (re)spawn. */
+  resetControls(throttle, { flaps = 0, gearDown = !this.aircraft.type.retractableGear } = {}) {
+    const c = this.input.controls;
+    c.throttle = throttle;
+    c.flaps = flaps;
+    c.gearDown = gearDown;
+    this.input.reset();
     this.rig.reset();
     this.loop.reset();
+  }
+
+  /** Switch game mode ('free', 'landing', ...). */
+  setMode(name, opts) {
+    this.mode?.dispose();
+    this.mode = new MODES[name](this);
+    this.env.invulnerable = this.mode.invulnerable;
+    this.overlay.hideBanner();
+    this.crashTimer = 0;
+    this.mode.start(opts);
+    this._worldTimer = 0;
   }
 
   setAircraft(id) {
@@ -195,6 +210,7 @@ export class Game {
           this.restart();
           break;
         case 'confirm':
+          if (this.mode.onConfirm?.()) break;
           if (this.aircraft.state.crashed && this.crashTimer > 0.6) this.restart();
           break;
         case 'gear':
@@ -247,7 +263,14 @@ export class Game {
          <button class="btn primary" data-act="resume">Resume <kbd>Esc</kbd></button>
          <button class="btn" data-act="restart">Restart flight <kbd>R</kbd></button>
          <button class="btn" data-act="help">Controls <kbd>H</kbd></button>
-       </div>`,
+       </div>
+       <h3 class="sub">Mode</h3>
+       <div class="row">
+         <button class="btn ${this.mode.name === 'free' ? 'primary' : ''}" data-mode="free">Free flight</button>
+         <button class="btn ${this.mode.name === 'landing' ? 'primary' : ''}" data-mode="landing">Landing challenge</button>
+       </div>
+       <h3 class="sub">Aircraft</h3>
+       <div class="row">${AIRCRAFT_IDS.map((id) => `<button class="btn ${this.aircraft.type.id === id ? 'primary' : ''}" data-aircraft="${id}">${AIRCRAFT[id].name}</button>`).join('')}</div>`,
       () => this._afterModal(),
     );
     this.overlay.modal.querySelector('[data-act=resume]').onclick = () => this.resume();
@@ -255,6 +278,18 @@ export class Game {
       this.resume();
       this.restart();
     };
+    for (const b of this.overlay.modal.querySelectorAll('[data-mode]')) {
+      b.onclick = () => {
+        this.resume();
+        this.setMode(b.dataset.mode);
+      };
+    }
+    for (const b of this.overlay.modal.querySelectorAll('[data-aircraft]')) {
+      b.onclick = () => {
+        this.resume();
+        this.setAircraft(b.dataset.aircraft);
+      };
+    }
     this.overlay.modal.querySelector('[data-act=help]').onclick = () => {
       this.overlay.closeModal();
       this.showHelp();
@@ -285,7 +320,7 @@ export class Game {
   restart() {
     this.overlay.hideBanner();
     this.crashTimer = 0;
-    this.spawnFree();
+    this.mode.restart();
   }
 
   _frame(now) {
@@ -304,6 +339,7 @@ export class Game {
       alpha = r.alpha;
     }
     for (const e of this.aircraft.drainEvents()) this.onFlightEvent(e);
+    if (!this.paused) this.mode.update(dt);
     if (this.aircraft.state.crashed) this.crashTimer += dt;
     const t1 = performance.now();
 
@@ -318,6 +354,7 @@ export class Game {
     this.water.update(dt, this.camera.position);
     this._updateWeather(dt);
     this.env3d.update(dt, this.camera, this.aircraft.renderPos);
+    this.airports.update(dt, this.camera.position, Math.min(this.viewDistance, 9000), this.env3d.state.night, this.weather.wind);
     const cl = this.env3d.cloudColors(this._cloudLight.lit, this._cloudLight.shadow);
     this.clouds.update(dt, this.camera, this.weather.current, this.weather.wind, cl, this.viewDistance * 0.95);
     this._ambient.copy(this.env3d.hemi.color).multiplyScalar(this.env3d.hemi.intensity);
@@ -361,10 +398,9 @@ export class Game {
     const nearest = this.terrain.nearestAirport(p.x, p.z);
     for (const ap of list) ap.active = ap === nearest;
     this.world.airports = list;
-    if (!this.modeTarget && nearest) {
-      this.world.target = { x: nearest.x, z: nearest.z, label: nearest.name.code };
-      this.nearestAirport = nearest;
-    }
+    this.nearestAirport = nearest;
+    if (this.mode.target) this.world.target = this.mode.target;
+    else if (nearest) this.world.target = { x: nearest.x, z: nearest.z, label: nearest.name.code };
   }
 
   _conditionsLine() {
@@ -382,7 +418,10 @@ export class Game {
     this.cockpit.setVisible(cockpit);
     this.cockpit.update(dt, s, controls, bug);
     this.hud.update({ dt, state: s, controls, bug, world: this.world, groundAt: this._groundFn });
-    if (!this.modeInfo) {
+    this.hud.setApproach(this.mode.approach?.() ?? null);
+    const info = this.mode.info();
+    if (info) this.hud.setInfo(info.title, info.body + this._conditionsLine());
+    else {
       const ap = this.nearestAirport;
       const d = ap ? Math.hypot(ap.x - s.pos.x, ap.z - s.pos.z) : 0;
       this.hud.setInfo(
@@ -396,6 +435,7 @@ export class Game {
   }
 
   onFlightEvent(e) {
+    this.mode.onEvent(e);
     if (e.type === 'touchdown') this.rig.bump(Math.min(1, Math.abs(e.vs) / 4));
     if (e.type === 'crash') {
       this.rig.bump(1.2);

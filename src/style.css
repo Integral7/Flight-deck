@@ -232,3 +232,22 @@ body.touch-mode .minimap { top: 60px; width: 120px; }
   position: absolute; inset: 0; pointer-events: none; z-index: 5;
   background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.28) 100%);
 }
+.modal h3.sub { margin: 18px 0 0; font: 700 11px var(--font); letter-spacing: 0.2em; text-transform: uppercase; color: var(--hud-dim); }
+.modal h3.sub + .row { margin-top: 8px; }
+.score-grid { display: grid; grid-template-columns: 1fr auto; gap: 4px 18px; text-align: left; margin: 10px auto 4px; max-width: 360px; font-size: 13.5px; color: var(--hud); }
+.score-grid b { font-family: var(--mono); }
+
+/* Approach guidance (ILS-style) */
+.hud-approach { position: absolute; right: calc(max(14px, env(safe-area-inset-right)) + 8px); top: 50%; transform: translateY(-50%); width: 130px; padding: 10px; display: grid; gap: 8px; }
+.hud-approach .ha-title { font: 700 10px var(--font); letter-spacing: 0.18em; color: var(--accent-2); text-align: center; }
+.ha-gs, .ha-loc { position: relative; background: rgba(0,0,0,0.35); border-radius: 6px; }
+.ha-gs { height: 110px; width: 26px; margin: 0 auto; }
+.ha-loc { height: 26px; }
+.ha-gs::before, .ha-loc::before { content: ''; position: absolute; background: rgba(255,255,255,0.7); }
+.ha-gs::before { left: 3px; right: 3px; top: 50%; height: 2px; margin-top: -1px; }
+.ha-loc::before { top: 3px; bottom: 3px; left: 50%; width: 2px; margin-left: -1px; }
+.ha-dot { position: absolute; width: 12px; height: 12px; background: #ff4fd8; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 8px #ff4fd8; }
+.ha-gs .ha-dot { left: 50%; }
+.ha-loc .ha-dot { top: 50%; }
+.ha-read { font: 600 11px var(--mono); color: var(--hud-dim); text-align: center; line-height: 1.4; }
+body.touch-mode .hud-approach { right: 90px; top: 46%; width: 104px; padding: 6px; }

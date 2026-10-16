@@ -81,7 +81,7 @@ export class CameraRig {
       const eye = EYE[this.typeId] || EYE.trainer;
       cam.position.copy(eye).applyQuaternion(quat).add(pos);
       // Default eye line looks slightly down so the panel and horizon share the view.
-      this._e.set(this.headPitch - 0.1, this.headYaw, 0, 'YXZ');
+      this._e.set(this.headPitch - 0.07, this.headYaw, 0, 'YXZ');
       this._q.setFromEuler(this._e);
       cam.quaternion.copy(quat).multiply(this._q);
       cam.near = 0.08;

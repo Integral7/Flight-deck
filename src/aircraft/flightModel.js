@@ -238,8 +238,9 @@ export function stepFlight(s, c, dt, env) {
   }
   const thrust = T.staticThrust * s.throttle * (rho / RHO0) * clamp(1 - Math.max(u, 0) / T.thrustFadeSpeed, 0, 1);
   _force.addScaledVector(_fwd, thrust);
-  // Fuselage side force: damps lateral slip (arcade "grip").
-  _force.addScaledVector(_right, -_vb.x * T.sideGrip * T.mass);
+  // Fuselage side force: damps lateral slip (arcade "grip"). Airborne only;
+  // on the ground the tyres handle side loads.
+  if (!s.onGround) _force.addScaledVector(_right, -_vb.x * T.sideGrip * T.mass);
 
   // Load factor felt by the pilot (non-gravity force along the up axis).
   _tmp.copy(_force);
@@ -287,7 +288,8 @@ export function stepFlight(s, c, dt, env) {
     // Nose-wheel steering, fading out as the rudder takes over.
     const speed = Math.hypot(s.vel.x, s.vel.z);
     const steer = -(yawIn + rollIn * 0.4) * 0.55 * clamp(speed / 4, 0, 1) * (1 - clamp((speed - 25) / 30, 0, 0.8));
-    s.angVel.y = steer + rT * 0.3;
+    // Weathervaning on the ground only matters once rolling.
+    s.angVel.y = steer + rT * 0.3 * clamp(speed / 12, 0, 1);
     s.angVel.z = 0;
   }
 
@@ -387,7 +389,9 @@ function groundRoll(s, g, dt) {
   latX *= latDamp;
   latZ *= latDamp;
   const rolling = g.runway ? 0.25 : 0.9;
-  const decel = rolling + s.brake * T.brakeDecel;
+  // Below walking pace with the engine idle the tyres hold (static friction).
+  const parked = Math.abs(along) < 0.6 && s.throttle < 0.08;
+  const decel = parked ? 50 : rolling + s.brake * T.brakeDecel;
   const mag = Math.abs(along);
   const newAlong = mag <= decel * dt ? 0 : along - Math.sign(along) * decel * dt;
   s.vel.x = _hf.x * newAlong + latX;

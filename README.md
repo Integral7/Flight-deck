@@ -48,8 +48,13 @@ Same commands in a terminal.
 | V | Flaps |
 | C | Chase / cockpit camera |
 | Mouse drag, wheel | Look around, zoom |
+| M | Large map (wheel zooms) |
+| T | Time of day +1 hour |
+| Y | Cycle weather (clear → scattered → overcast → rain → fog) |
+| U | Hide / show HUD |
 | R | Reset flight |
-| Esc | Pause |
+| Enter | Retry after a crash or a landing result |
+| Esc | Pause menu (switch mode and aircraft here) |
 | H | Help |
 
 Throttle down is **Z**, not Ctrl: Ctrl+W closes the browser tab.
@@ -57,6 +62,18 @@ Throttle down is **Z**, not Ctrl: Ctrl+W closes the browser tab.
 Touch screens get an on-screen stick, throttle slider, rudder and buttons. A gamepad works too.
 To try the touch UI with a mouse, add `?touch=1` to the URL.
 
+## Modes
+
+- **Free flight** – start near your home airport and explore.
+- **Landing challenge** – start on a 3° final approach. The approach panel shows glide slope and
+  centreline guidance (fly toward the magenta diamonds), the PAPI lights beside the runway show two
+  white / two red when you are on the glide path. You are scored out of 100 on touchdown rate,
+  centreline, touchdown zone, wings level and stopping on the runway; bounces cost points.
+  Best scores are saved per aircraft.
+
+Switch modes and aircraft from the pause menu (Esc).
+
 ## URL options
 
-`?quality=low|medium|high`, `?aircraft=trainer|aerobatic|bush`, `?seed=1234`, `?touch=1`
+`?mode=free|landing`, `?aircraft=trainer|aerobatic|bush`, `?quality=low|medium|high`, `?seed=1234`,
+`?time=17.5` (hour of day), `?weather=clear|cloudy|overcast|rain|fog`, `?touch=1`

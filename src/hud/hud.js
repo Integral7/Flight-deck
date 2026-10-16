@@ -28,6 +28,18 @@ export class HUD {
     this.infoTitle = this.info.querySelector('.hi-title');
     this.infoBody = this.info.querySelector('.hi-body');
 
+    this.approachEl = document.createElement('div');
+    this.approachEl.className = 'hud-approach panel';
+    this.approachEl.hidden = true;
+    this.approachEl.innerHTML = `<div class="ha-title">APPROACH</div>
+      <div class="ha-gs"><div class="ha-dot"></div></div>
+      <div class="ha-loc"><div class="ha-dot"></div></div>
+      <div class="ha-read"></div>`;
+    this.root.append(this.approachEl);
+    this.gsDot = this.approachEl.querySelector('.ha-gs .ha-dot');
+    this.locDot = this.approachEl.querySelector('.ha-loc .ha-dot');
+    this.approachRead = this.approachEl.querySelector('.ha-read');
+
     this.minimap = new Minimap(this.root, mapRenderer);
     this.largeMap = new LargeMap(container, mapRenderer);
 
@@ -56,6 +68,25 @@ export class HUD {
     this.info.hidden = !title;
     this.infoTitle.textContent = title || '';
     this.infoBody.innerHTML = bodyHTML || '';
+  }
+
+  /**
+   * ILS-style guidance: diamonds show where the glide path / centreline is
+   * relative to the aircraft (fly toward the diamond).
+   * @param {null|{glideDev:number, locDev:number, toThreshold:number, height:number}} g
+   */
+  setApproach(g) {
+    this.approachEl.hidden = !g || !this.visible;
+    if (!g) return;
+    // Full scale: +/-0.7 deg glide slope, +/-2.5 deg localizer.
+    const gs = Math.max(-1, Math.min(1, g.glideDev / 0.7));
+    const loc = Math.max(-1, Math.min(1, g.locDev / 2.5));
+    // Above the path -> path is below us -> diamond moves down.
+    this.gsDot.style.top = `${50 + gs * 42}%`;
+    // Right of centreline -> centreline is to our left -> diamond moves left.
+    this.locDot.style.left = `${50 - loc * 42}%`;
+    const nm = Math.max(0, g.toThreshold) / 1852;
+    this.approachRead.textContent = `${nm.toFixed(1)} nm · ${Math.round(Math.max(0, g.height) * 3.28084)} ft`;
   }
 
   /**

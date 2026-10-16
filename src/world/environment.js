@@ -169,14 +169,14 @@ export class Environment {
    */
   attachLandingLight(model, type) {
     if (!this.landingLight) {
-      this.landingLight = new THREE.SpotLight(0xfff2dc, 0, 900, 0.32, 0.5, 1.2);
+      this.landingLight = new THREE.SpotLight(0xfff2dc, 0, 1500, 0.24, 0.45, 2);
       this.landingLight.castShadow = false;
       this.landingTarget = new THREE.Object3D();
     }
     this.landingLight.parent?.remove(this.landingLight);
     this.landingTarget.parent?.remove(this.landingTarget);
     this.landingLight.position.set(0, -0.2, -type.noseLength + 0.4);
-    this.landingTarget.position.set(0, -12, -80);
+    this.landingTarget.position.set(0, -14, -100);
     model.add(this.landingLight, this.landingTarget);
     this.landingLight.target = this.landingTarget;
   }
@@ -184,7 +184,7 @@ export class Environment {
   _updateLandingLight() {
     if (!this.landingLight) return;
     const dark = Math.max(this.state.night, this.weather.overcast * 0.5 * (1 - this.state.sunIntensity / 3));
-    this.landingLight.intensity = dark > 0.15 ? 9000 * Math.min(1, dark * 1.4) : 0;
+    this.landingLight.intensity = dark > 0.15 ? 22000 * Math.min(1, dark * 1.4) : 0;
   }
 
   _updateEnvMap(dt, st) {

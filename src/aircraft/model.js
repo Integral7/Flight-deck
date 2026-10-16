@@ -297,7 +297,7 @@ export function animateAircraft(model, state, controls, dt, time) {
   const blur = THREE.MathUtils.clamp((rpm - 900) / 1200, 0, 1);
   p.propDisc.material.opacity = 0.05 + blur * 0.2;
   // Above ~1300 rpm the eye only sees the disc, not individual blades.
-  p.prop.visible = blur < 0.35;
+  p.prop.visible = blur < 0.2;
 
   // Gear retraction: legs fold inward into the wing / nose.
   if (T.retractableGear) {

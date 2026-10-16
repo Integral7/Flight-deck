@@ -41,8 +41,10 @@ export class Cockpit {
     const centreX = type.id === 'aerobatic' ? 0 : eye.x * 0.35;
     const panelW = type.id === 'aerobatic' ? 0.7 : 0.86;
     const panelH = panelW / 2;
-    const panelZ = eye.z - 0.64;
-    const panelTopY = eye.y - 0.15;
+    // Over-the-nose view of ~15 degrees: enough to keep the runway in sight
+    // on a nose-up final approach.
+    const panelZ = eye.z - 0.62;
+    const panelTopY = eye.y - 0.24;
 
     // Instrument panel face (self-lit so it stays readable at night).
     const face = new THREE.Mesh(
@@ -54,12 +56,17 @@ export class Cockpit {
     face.rotation.x = -0.12;
     g.add(face);
     // Dash body behind the panel (front face clear of the tilted panel).
-    const dash = box(1.7, 0.7, 0.5, dark);
-    dash.position.set(centreX, panelTopY - 0.35, panelZ - 0.33);
+    const dash = box(1.7, 0.7, 0.24, dark);
+    dash.position.set(centreX, panelTopY - 0.36, panelZ - 0.2);
     g.add(dash);
-    const glare = box(1.75, 0.05, 0.34, trim);
-    glare.position.set(centreX, panelTopY + 0.02, panelZ - 0.12);
+    const glare = box(1.75, 0.04, 0.2, trim);
+    glare.position.set(centreX, panelTopY + 0.01, panelZ - 0.07);
     g.add(glare);
+    // Nose cowling top seen beyond the glareshield, sloping away and down.
+    const cowl = box(0.7, 0.04, 1.1, new THREE.MeshStandardMaterial({ color: 0x2b2d31, roughness: 0.7 })); // anti-glare paint
+    cowl.position.set(0, panelTopY - 0.12, panelZ - 0.85);
+    cowl.rotation.x = -0.12;
+    g.add(cowl);
     const lip = box(1.75, 0.02, 0.03, accent);
     lip.position.set(centreX, panelTopY + 0.035, panelZ + 0.04);
     g.add(lip);
@@ -80,14 +87,14 @@ export class Cockpit {
       for (const side of [-1, 1]) {
         const x = centreX + side * 0.82;
         const pillar = box(0.06, 0.62, 0.06, trim);
-        pillar.position.set(x, (panelTopY + roofY) / 2, panelZ - 0.05);
+        pillar.position.set(x, (panelTopY + roofY) / 2, panelZ - 0.08);
         pillar.rotation.x = -0.45;
         g.add(pillar);
         const doorPost = box(0.06, 0.62, 0.06, trim);
         doorPost.position.set(x, (panelTopY + roofY) / 2, eye.z + 0.45);
         g.add(doorPost);
         const sill = box(0.08, 0.06, 1.6, trim);
-        sill.position.set(x, panelTopY - 0.1, eye.z - 0.2);
+        sill.position.set(x, panelTopY - 0.02, eye.z - 0.2);
         g.add(sill);
       }
       const roof = box(1.8, 0.05, 1.3, dark);

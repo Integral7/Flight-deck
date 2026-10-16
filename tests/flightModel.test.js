@@ -200,6 +200,16 @@ describe('flight model: ground handling', () => {
     expect(s.crashed).toBe(false);
   });
 
+  it('a parked aircraft stays put in a gusty crosswind', () => {
+    const s = createFlightState(AIRCRAFT.trainer);
+    placeOnGround(s, { x: 0, z: 0, heading: 1 }, 0);
+    const env = flatEnvironment(0, { turbulence: 0.5 });
+    env.wind.set(-9, 0, 3);
+    sim(s, 30, () => ({ throttle: 0 }), env);
+    expect(Math.hypot(s.pos.x, s.pos.z)).toBeLessThan(1);
+    expect(Math.abs(s.heading - 1)).toBeLessThan(0.02);
+  });
+
   it('steers on the ground with the rudder', () => {
     const s = createFlightState(AIRCRAFT.trainer);
     placeOnGround(s, { x: 0, z: 0, heading: 0 }, 0);
