@@ -29,7 +29,7 @@ export class ChunkManager {
     this.ready = [];
     this.center = { cx: Infinity, cz: Infinity };
     this._createPool();
-    this.stats = { chunks: 0, treeChunks: 0, pending: 0, triangles: 0 };
+    this.stats = { chunks: 0, treeChunks: 0, pending: 0 };
   }
 
   _createPool() {
@@ -65,6 +65,18 @@ export class ChunkManager {
    * @param {THREE.Vector3} forward camera forward (for build priority)
    */
   update(cam, forward) {
+    // The ring scan is the expensive part; skip it unless the camera moved
+    // noticeably or a little time passed. Jobs and uploads still run.
+    const now = performance.now();
+    const moved = this._lastScan ? Math.hypot(cam.x - this._lastScan.x, cam.y - this._lastScan.y, cam.z - this._lastScan.z) : Infinity;
+    if (moved < 24 && now - (this._lastScanTime || 0) < 250 && !this._dirty) {
+      this.pool.pump();
+      this._attachReady();
+      return;
+    }
+    this._lastScan = { x: cam.x, y: cam.y, z: cam.z };
+    this._lastScanTime = now;
+    this._dirty = false;
     const pr = this.preset;
     const ccx = Math.floor(cam.x / CHUNK_SIZE);
     const ccz = Math.floor(cam.z / CHUNK_SIZE);
@@ -85,7 +97,7 @@ export class ChunkManager {
         seen.add(key);
         let c = this.chunks.get(key);
         if (!c) {
-          c = { cx, cz, key, lod: -1, pendingLod: -1, mesh: null, trees: null, treesPending: false };
+          c = { cx, cz, key, lod: -1, pendingLod: -1, mesh: null, trees: null, treesPending: false, treeTier: null, treeJob: 0 };
           this.chunks.set(key, c);
         }
         const dist = Math.hypot(flat, (alt / CHUNK_SIZE) * 0.7);
@@ -100,12 +112,21 @@ export class ChunkManager {
           c.pendingLod = want;
           this.pool.request({ type: 'chunk', id: key, cx, cz, lod: want, priority: c.prio, chunk: c });
         }
-        const wantTrees = flat <= pr.treeRadius + 0.5 && pr.treeDensity > 0;
-        if (wantTrees && !c.trees && !c.treesPending) {
-          c.treesPending = true;
-          this.pool.request({ type: 'trees', id: key, cx, cz, density: pr.treeDensity, priority: c.prio + 2, chunk: c });
-        } else if (!wantTrees && (c.trees || c.treesPending) && flat > pr.treeRadius + 1.2) {
-          this._dropTrees(c);
+        // Trees: full detail near the camera, a sparse low-poly tier beyond,
+        // none further out. Hysteresis avoids flip-flopping at boundaries.
+        let tier = flat <= pr.treeRadius + 0.5 ? 'near' : flat <= pr.farTreeRadius + 0.5 ? 'far' : null;
+        if (c.treeTier === 'near' && tier !== 'near' && flat <= pr.treeRadius + 1.2) tier = 'near';
+        if (c.treeTier === 'far' && tier === null && flat <= pr.farTreeRadius + 1.2) tier = 'far';
+        if (pr.treeDensity <= 0) tier = null;
+        if (tier !== c.treeTier) {
+          if (tier === null) this._dropTrees(c);
+          else {
+            if (c.treesPending) this.pool.cancel((j) => j.id === key && j.type === 'trees');
+            c.treeTier = tier;
+            c.treesPending = true;
+            const density = tier === 'near' ? pr.treeDensity : pr.treeDensity * 0.3;
+            c.treeJob = this.pool.request({ type: 'trees', id: key, cx, cz, density, priority: c.prio + 2, chunk: c });
+          }
         }
       }
     }
@@ -126,28 +147,44 @@ export class ChunkManager {
     this.stats.pending = this.pool.busy;
   }
 
+  /** Importance of a finished job: lower attaches first. */
+  _readyRank(msg) {
+    const c = this.chunks.get(msg.id);
+    if (!c) return -1; // stale: drop immediately
+    if (msg.type === 'chunk') return c.mesh ? 2 + c.prio * 0.01 : 0;
+    return c.treeTier === 'near' ? 1 : 3;
+  }
+
   _attachReady() {
-    // While the game holds for loading, attach much more per frame.
-    let budget = this.preset.chunkBuildsPerFrame * (this.boost ? 6 : 1);
-    // Attach the most important results first (missing chunks before refinements).
-    while (this.ready.length && budget > 0) {
+    if (!this.ready.length) return;
+    // Time-boxed: fast machines attach more per frame, slow ones stay smooth.
+    const budgetMs = (this.boost ? 14 : 2.5) * (this.preset.name === 'low' ? 0.7 : 1);
+    const start = performance.now();
+    if (this.ready.length > 1) {
+      for (const m of this.ready) m.rank = this._readyRank(m);
+      this.ready.sort((a, b) => a.rank - b.rank);
+    }
+    let done = 0;
+    while (this.ready.length && (done === 0 || performance.now() - start < budgetMs)) {
       const msg = this.ready.shift();
       const c = this.chunks.get(msg.id);
       if (!c) continue;
       if (msg.type === 'chunk') {
         if (msg.data.lod !== c.pendingLod) continue;
         this._setMesh(c, msg.data);
-        budget--;
+        done++;
       } else if (msg.type === 'trees') {
-        if (!c.treesPending) continue;
+        if (!c.treesPending || msg.job !== c.treeJob) continue;
         c.treesPending = false;
-        if (msg.data.length) {
-          c.trees = this.vegetation.createGroup(msg.data, c.cx * CHUNK_SIZE, c.cz * CHUNK_SIZE);
-          this.root.add(c.trees);
-        } else {
-          c.trees = new THREE.Group();
+        // Swap in the new tier only once it exists, so trees never blink out.
+        const old = c.trees;
+        c.trees = msg.data.length ? this.vegetation.createGroup(msg.data, c.cx * CHUNK_SIZE, c.cz * CHUNK_SIZE, c.treeTier) : new THREE.Group();
+        this.root.add(c.trees);
+        if (old) {
+          this.root.remove(old);
+          this.vegetation.disposeGroup(old);
         }
-        budget -= 0.5;
+        done++;
       }
     }
   }
@@ -191,6 +228,8 @@ export class ChunkManager {
     c.trees = null;
     if (c.treesPending) this.pool.cancel((j) => j.id === c.key && j.type === 'trees');
     c.treesPending = false;
+    c.treeTier = null;
+    c.treeJob = 0;
   }
 
   _unload(c) {
@@ -224,18 +263,20 @@ export class ChunkManager {
   }
 
   applyQuality(preset) {
+    this._dirty = true;
     const treesChanged = preset.treeDensity !== this.preset.treeDensity;
     this.preset = preset;
     this.vegetation.setShadows(preset.name === 'high');
     for (const c of this.chunks.values()) {
       if (treesChanged) this._dropTrees(c);
-      else if (c.trees) c.trees.traverse((o) => o.isInstancedMesh && (o.castShadow = this.vegetation.castShadow));
+      else if (c.trees && c.treeTier === 'near') c.trees.traverse((o) => o.isInstancedMesh && (o.castShadow = this.vegetation.castShadow));
     }
   }
 
   clear() {
     for (const c of [...this.chunks.values()]) this._unload(c);
     this.ready = [];
+    this._dirty = true;
   }
 
   /** Switch to a new world seed. */

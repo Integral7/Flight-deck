@@ -13,6 +13,7 @@ import { Clouds } from './world/clouds.js';
 import { Rain } from './world/rain.js';
 import { AirportRenderer } from './world/airports.js';
 import { RingRenderer } from './world/rings.js';
+import { Effects } from './world/effects.js';
 import { Aircraft } from './aircraft/aircraft.js';
 import { AIRCRAFT, AIRCRAFT_IDS } from './aircraft/types.js';
 import { CameraRig } from './camera/cameras.js';
@@ -84,6 +85,7 @@ export class Game {
     this.rain = new Rain(this.scene, this.settings.preset.rainCount);
     this.airports = new AirportRenderer(this.scene, this.terrain);
     this.rings = new RingRenderer(this.scene);
+    this.effects = new Effects(this.scene);
     this._cloudLight = { lit: new THREE.Color(), shadow: new THREE.Color() };
     this._ambient = new THREE.Color();
     this._applyTime();
@@ -140,6 +142,7 @@ export class Game {
     const t = Number(p.get('time'));
     if (p.has('time') && Number.isFinite(t)) st.set('timeOfDay', t);
     if (MODES[p.get('mode')]) st.set('mode', p.get('mode'));
+    if (p.get('adaptive') === '0') st.set('adaptiveResolution', false);
   }
 
   // ---------------------------------------------------------------------
@@ -290,6 +293,7 @@ export class Game {
   /** Switch game mode ('free', 'landing', 'timetrial', 'scenic'). */
   setMode(name, opts = {}) {
     this.mode?.dispose();
+    this.effects?.clear();
     this.mode = new MODES[name](this);
     this.mode.quiet = !!opts.quiet;
     if (!opts.quiet) this.settings.set('mode', name);
@@ -329,6 +333,7 @@ export class Game {
   }
 
   restart() {
+    this.effects.clear();
     this.overlay.hideBanner();
     this.crashTimer = 0;
     this.mode.restart();
@@ -539,6 +544,7 @@ export class Game {
     this.clouds.update(dt, this.camera, this.weather.current, this.weather.wind, cl, this.viewDistance * 0.95);
     this._ambient.copy(this.env3d.hemi.color).multiplyScalar(this.env3d.hemi.intensity);
     this.rain.update(dt, this.camera, this.weather.current.rain, this.aircraft.state.vel, this.weather.wind, this._ambient);
+    this.effects.update(dt, this.weather.wind, this._ambient);
     const t2 = performance.now();
 
     this.camera.aspect = this.renderer.aspect;
@@ -638,6 +644,8 @@ export class Game {
     if (e.type === 'touchdown') this.rig.bump(Math.min(1, Math.abs(e.vs) / 4));
     if (e.type === 'crash') {
       this.rig.bump(1.2);
+      const p = this.aircraft.state.pos;
+      if (p.y > SEA_LEVEL + 0.5) this.effects.wreck(p);
       this.overlay.showBanner({
         kind: 'bad',
         kicker: 'Crash',

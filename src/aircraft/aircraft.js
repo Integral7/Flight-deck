@@ -15,6 +15,7 @@ export class Aircraft {
     this.prevQuat = new THREE.Quaternion();
     this.renderPos = new THREE.Vector3();
     this.renderQuat = new THREE.Quaternion();
+    this._wreck = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.18, 0.3, 0.42, 'YXZ'));
     this.setType(typeId);
   }
 
@@ -60,6 +61,11 @@ export class Aircraft {
     this.renderQuat.slerpQuaternions(this.prevQuat, this.state.quat, alpha);
     this.model.position.copy(this.renderPos);
     this.model.quaternion.copy(this.renderQuat);
+    if (this.state.crashed) {
+      // Wreck pose: nosed over, one wing dug in, settled into the ground.
+      this.model.quaternion.multiply(this._wreck);
+      this.model.position.y -= this.type.gearHeight * 0.6;
+    }
     animateAircraft(this.model, this.state, controls, dt, time);
   }
 

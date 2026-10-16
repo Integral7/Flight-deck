@@ -40,23 +40,33 @@ function merge(input) {
   return out;
 }
 
+// Open-ended cylinders/cones: caps and cone bases are never visible, so
+// leaving them out saves ~40 % of the triangles per tree.
 function coniferGeometry() {
-  const trunk = colorize(new THREE.CylinderGeometry(0.35, 0.5, 4, 5).translate(0, 2, 0), 0x4a3524);
-  const low = colorize(new THREE.ConeGeometry(3.2, 7, 7).translate(0, 6.5, 0), 0x2d5a2f);
-  const high = colorize(new THREE.ConeGeometry(2.3, 6, 7).translate(0, 10, 0), 0x346a36);
+  const trunk = colorize(new THREE.CylinderGeometry(0.35, 0.5, 4, 5, 1, true).translate(0, 2, 0), 0x4a3524);
+  const low = colorize(new THREE.ConeGeometry(3.2, 7, 7, 1, true).translate(0, 6.5, 0), 0x2d5a2f);
+  const high = colorize(new THREE.ConeGeometry(2.3, 6, 6, 1, true).translate(0, 10, 0), 0x346a36);
   return merge([trunk, low, high]);
 }
 
 function broadleafGeometry() {
-  const trunk = colorize(new THREE.CylinderGeometry(0.35, 0.55, 4.5, 5).translate(0, 2.25, 0), 0x55402b);
-  const crown = colorize(new THREE.IcosahedronGeometry(3.6, 0).scale(1, 0.85, 1).translate(0, 7, 0), 0x4d7a2c);
-  const crown2 = colorize(new THREE.IcosahedronGeometry(2.4, 0).translate(1.4, 8.6, 0.6), 0x5b8a33);
-  return merge([trunk, crown, crown2]);
+  const trunk = colorize(new THREE.CylinderGeometry(0.35, 0.55, 4.5, 5, 1, true).translate(0, 2.25, 0), 0x55402b);
+  const crown = colorize(new THREE.IcosahedronGeometry(3.7, 0).scale(1, 0.9, 1).translate(0, 7.2, 0), 0x4f7c2d);
+  return merge([trunk, crown]);
+}
+
+/** Distant tier: a handful of triangles per tree, no trunk. */
+function farConifer() {
+  return merge([colorize(new THREE.ConeGeometry(3, 12, 5, 1, true).translate(0, 7, 0), 0x2f5d31)]);
+}
+function farBroadleaf() {
+  return merge([colorize(new THREE.OctahedronGeometry(3.8, 0).scale(1, 1.1, 1).translate(0, 7, 0), 0x4f7c2e)]);
 }
 
 export class Vegetation {
   constructor() {
     this.geometries = [coniferGeometry(), broadleafGeometry()];
+    this.farGeometries = [farConifer(), farBroadleaf()];
     this.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
     this.castShadow = false;
     this._m = new THREE.Matrix4();
@@ -68,23 +78,27 @@ export class Vegetation {
   }
 
   /** Create the tree group for one chunk from worker data. */
-  createGroup(data, originX, originZ) {
+  createGroup(data, originX, originZ, tier = 'near') {
+    const geos = tier === 'far' ? this.farGeometries : this.geometries;
     const group = new THREE.Group();
     group.position.set(originX, 0, originZ);
     const count = data.length / TREE_STRIDE;
     const counts = [0, 0];
-    for (let i = 0; i < count; i++) counts[data[i * TREE_STRIDE + 5]]++;
+    const far = tier === 'far';
+    // Far tier: every tree uses one mesh (one draw call per chunk).
+    const kindOf = (i) => (far ? 0 : data[i * TREE_STRIDE + 5]);
+    for (let i = 0; i < count; i++) counts[kindOf(i)]++;
     for (let kind = 0; kind < 2; kind++) {
       if (!counts[kind]) continue;
-      const mesh = new THREE.InstancedMesh(this.geometries[kind], this.material, counts[kind]);
-      mesh.castShadow = this.castShadow;
+      const mesh = new THREE.InstancedMesh(geos[kind], this.material, counts[kind]);
+      mesh.castShadow = tier === 'near' && this.castShadow;
       mesh.receiveShadow = false;
       let k = 0;
       let minY = Infinity;
       let maxY = -Infinity;
       for (let i = 0; i < count; i++) {
         const o = i * TREE_STRIDE;
-        if (data[o + 5] !== kind) continue;
+        if (kindOf(i) !== kind) continue;
         const sc = data[o + 3];
         this._p.set(data[o], data[o + 1], data[o + 2]);
         this._q.setFromAxisAngle(this._up, data[o + 4]);
@@ -92,7 +106,8 @@ export class Vegetation {
         this._m.compose(this._p, this._q, this._s);
         mesh.setMatrixAt(k, this._m);
         const tint = 0.8 + 0.4 * ((i * 0.7548) % 1);
-        this._c.setRGB(tint, tint * (0.95 + 0.1 * ((i * 0.31) % 1)), tint * 0.9);
+        const broad = far && data[o + 5] === 1;
+        this._c.setRGB(tint * (broad ? 1.25 : 1), tint * (broad ? 1.2 : 0.95 + 0.1 * ((i * 0.31) % 1)), tint * 0.9);
         mesh.setColorAt(k, this._c);
         minY = Math.min(minY, data[o + 1]);
         maxY = Math.max(maxY, data[o + 1] + 14 * sc);

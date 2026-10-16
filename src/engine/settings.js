@@ -19,6 +19,7 @@ export const QUALITY_PRESETS = {
     viewRadius: 6, // chunks (512 m each)
     lodDistances: [1.5, 3, 4.5], // chunk-distance thresholds between LOD levels
     treeRadius: 2,
+    farTreeRadius: 4,
     treeDensity: 0.45,
     cloudCount: 50,
     rainCount: 2500,
@@ -36,6 +37,7 @@ export const QUALITY_PRESETS = {
     viewRadius: 9,
     lodDistances: [2, 4, 6.5],
     treeRadius: 3,
+    farTreeRadius: 6,
     treeDensity: 0.75,
     cloudCount: 110,
     rainCount: 6000,
@@ -53,6 +55,7 @@ export const QUALITY_PRESETS = {
     viewRadius: 12,
     lodDistances: [2.5, 5, 8.5],
     treeRadius: 4,
+    farTreeRadius: 8,
     treeDensity: 1.0,
     cloudCount: 180,
     rainCount: 10000,
