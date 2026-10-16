@@ -21,8 +21,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 |---|-----------|--------|
 | 1 | Scaffold: Vite, Three.js, Vitest, ESLint, loop, empty scene | ✅ done |
 | 2 | Noise + heightfield, terrain tests | ✅ done |
-| 3 | Chunked terrain + LOD + worker, water, forests | ⏳ next |
-| 4 | Flight model + tests, aircraft meshes, chase camera | |
+| 3 | Chunked terrain + LOD + worker, water, forests | ✅ done |
+| 4 | Flight model + tests, aircraft meshes, chase camera | ⏳ next |
 | 5 | Input: keyboard + touch — **PAUSE for user** | |
 | 6 | Cockpit + instruments, HUD, minimap | |
 | 7 | Sky, day/night, lighting polish | |
@@ -49,13 +49,27 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   `tests/terrain.test.js` (29 tests total, all green).
 - `scripts/terrain-map.mjs [seed] [size] [px] [out]` renders a biome map PNG + stats.
 
+- M3: `src/terrain/chunk.js` (pure: `buildChunk` grid+skirts+normals+blended vertex
+  colours, `buildTrees` jittered-grid scatter), `terrainWorker.js` + `workerPool.js`
+  (priority queue, re-prioritised each frame, main-thread fallback), `chunkManager.js`
+  (512 m chunks, 4 LODs [64,32,16,8 segs], 3D-distance LOD with hysteresis, keeps old
+  mesh until new LOD arrives, per-frame attach budget), `terrainMaterial.js` (shader
+  detail noise), `vegetation.js` (instanced conifer/broadleaf), `src/world/water.js`
+  (camera-following plane, two-layer scrolling normal map). Renderer uses reversed depth
+  when EXT_clip_control exists. `tests/chunk.test.js` (seams, LOD cracks vs skirts,
+  winding, trees). 39 tests green.
+- `src/main.js` is currently a terrain demo (auto-flying camera); M4 replaces it.
+
 ## Next
-- M3: `src/terrain/chunk.js` (mesh arrays from heightfield, skirts, vertex colours),
-  `chunkManager.js` (rings, LOD, worker pool, per-frame upload budget),
-  `terrainWorker.js`, `water.js`, `vegetation.js` (instanced trees). Tests for chunk seams.
+- M4: `src/aircraft/{types,flightModel,model,collision}.js`, `src/camera/cameras.js`,
+  `tests/flightModel.test.js`; main.js becomes the Game with aircraft + chase cam.
 
 ## Known issues
-- Headless Chromium uses software WebGL, so FPS there (~20) is not representative.
+- Headless Chromium uses software WebGL, so FPS there (~5) is not representative.
+  CPU per frame measured: chunk update ~0.9 ms, render submit ~3 ms (medium).
+- Visible line where instanced trees stop (tree radius). Polish idea: far tree tier
+  with low-poly/billboard trees at reduced density (M12).
+- Colours look washed out; lighting/tone tuning planned for M7.
 
 ## Commands
 - `npm install`, `npm run dev`, `npm test`, `npm run lint`, `npm run build`

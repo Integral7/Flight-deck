@@ -336,6 +336,7 @@ export function createTerrain(seed = 1337) {
     normalAt,
     biome,
     forestDensity,
+    forestDensityFromSample: forestDensityFrom,
     snowLine,
     airportForCell,
     airportsNear,

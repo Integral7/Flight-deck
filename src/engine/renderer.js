@@ -1,5 +1,19 @@
 import * as THREE from 'three';
 
+let reversedDepthSupport;
+/** Probe once for EXT_clip_control (needed for a reversed depth buffer). */
+function supportsReversedDepth() {
+  if (reversedDepthSupport !== undefined) return reversedDepthSupport;
+  try {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    reversedDepthSupport = !!gl?.getExtension('EXT_clip_control');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  } catch {
+    reversedDepthSupport = false;
+  }
+  return reversedDepthSupport;
+}
+
 /**
  * Owns the WebGLRenderer: tone mapping, shadows, resize handling and dynamic
  * resolution. Antialiasing is a context-creation flag, so changing it
@@ -22,6 +36,9 @@ export class Renderer {
       powerPreference: 'high-performance',
       preserveDrawingBuffer: false,
       stencil: false,
+      // Reversed-Z gives near-uniform depth precision from the cockpit to the
+      // horizon, avoiding z-fighting on distant terrain and shorelines.
+      reversedDepthBuffer: supportsReversedDepth(),
     });
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
