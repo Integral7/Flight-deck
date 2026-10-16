@@ -22,8 +22,8 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
 | 1 | Scaffold: Vite, Three.js, Vitest, ESLint, loop, empty scene | ✅ done |
 | 2 | Noise + heightfield, terrain tests | ✅ done |
 | 3 | Chunked terrain + LOD + worker, water, forests | ✅ done |
-| 4 | Flight model + tests, aircraft meshes, chase camera | ⏳ next |
-| 5 | Input: keyboard + touch — **PAUSE for user** | |
+| 4 | Flight model + tests, aircraft meshes, chase camera | ✅ done |
+| 5 | Input: keyboard + touch — **PAUSE for user** | ⏳ next |
 | 6 | Cockpit + instruments, HUD, minimap | |
 | 7 | Sky, day/night, lighting polish | |
 | 8 | Weather: clouds, fog, rain | |
@@ -58,11 +58,23 @@ Tests (Vitest) for flight model and terrain. README with "How this was built".
   (camera-following plane, two-layer scrolling normal map). Renderer uses reversed depth
   when EXT_clip_control exists. `tests/chunk.test.js` (seams, LOD cracks vs skirts,
   winding, trees). 39 tests green.
-- `src/main.js` is currently a terrain demo (auto-flying camera); M4 replaces it.
+- M4: `src/aircraft/types.js` (Skylark T-1 trainer, Vortex A-7 aerobatic w/ retractable
+  gear, Kodiak STOL bush plane), `flightModel.js` (pure: lift/drag/thrust/gravity/side-grip
+  forces, rate-commanded rotation with weathervane stability + 1 g auto-trim, stall with
+  wing drop, ground effect, flaps, gear, ground roll/brakes/steering, touchdown + crash
+  classification, airframe strike probes, wind/turbulence, invulnerable flag for scenic),
+  `model.js` (procedural meshes, animated surfaces/prop/gear/strobe), `aircraft.js`
+  (render interpolation), `src/camera/cameras.js` (chase + cockpit), `src/input/{bindings,
+  input}.js` (keyboard, mouse look, gamepad), `src/game.js` (Game class, spawn picks the
+  approach with lowest terrain). `scripts/tune-flight.mjs` prints the flight envelope.
+  `tests/flightModel.test.js` (29 tests). 68 tests total, green.
+- Controls: W/S pitch (W = nose down), A/D roll, Q/E yaw, Shift/Z throttle (no Ctrl:
+  Ctrl+W closes the tab), digits set throttle, B/Space brakes, G gear, V flaps, C camera,
+  R reset.
 
 ## Next
-- M4: `src/aircraft/{types,flightModel,model,collision}.js`, `src/camera/cameras.js`,
-  `tests/flightModel.test.js`; main.js becomes the Game with aircraft + chase cam.
+- M5: `src/input/touch.js` (virtual stick + throttle slider + buttons), pause/help overlay,
+  crash/reset flow, input tests. Then **PAUSE** and give the user Windows run commands.
 
 ## Known issues
 - Headless Chromium uses software WebGL, so FPS there (~5) is not representative.

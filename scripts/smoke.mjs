@@ -50,7 +50,12 @@ for (const k of keys) {
   await page.keyboard.up(key);
 }
 const remaining = seconds * 1000 - (Date.now() - start);
-if (remaining > 0) await page.waitForTimeout(remaining);
+if (process.env.EVAL) {
+  // Optional script run halfway through, e.g. to switch camera for a screenshot.
+  await page.waitForTimeout(Math.max(0, remaining / 2));
+  await page.evaluate(process.env.EVAL);
+  await page.waitForTimeout(Math.max(0, remaining / 2));
+} else if (remaining > 0) await page.waitForTimeout(remaining);
 
 mkdirSync('screenshots', { recursive: true });
 await page.screenshot({ path: `screenshots/${name}.png` });

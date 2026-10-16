@@ -52,7 +52,7 @@ export function terrainColor(terrain, s, slope, x, z, out) {
   // Airport grass pad.
   if (s.airport > 0) mix3(out, out, C.pad, s.airport * 0.8);
   // Beaches and river banks.
-  const beach = 1 - smoothstep(SEA_LEVEL + 1.5, SEA_LEVEL + 5, h);
+  const beach = 1 - smoothstep(SEA_LEVEL + 0.8, SEA_LEVEL + 3.4, h);
   if (beach > 0) mix3(out, out, C.sand, beach * (1 - s.airport));
   const wet = 1 - smoothstep(SEA_LEVEL - 1, SEA_LEVEL + 1.2, h);
   if (wet > 0) mix3(out, out, C.wetSand, wet);

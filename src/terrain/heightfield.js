@@ -93,7 +93,7 @@ export function createTerrain(seed = 1337) {
     const valley = (1 - smoothstep(halfW, valleyW, dist)) * strength;
     const channel = (1 - smoothstep(halfW * 0.55, halfW, dist)) * strength;
     if (valley > 0) {
-      let carved = lerp(h, 2.2, Math.pow(valley, 1.4));
+      let carved = lerp(h, 3.2, Math.pow(valley, 1.4));
       carved = lerp(carved, -4.5, channel);
       if (carved < h) h = carved;
     }
